@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlhead('Student Directory')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('students')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Student Directory</h1>
+            <p class="page-subtitle">Manage enrolled students, verify polymorphic user descriptions, and register new candidates.</p>
+        </div>
+        <div>
+            <span class="badge badge-indigo" th:text="${students.size()} + ' Total Students'">0 Students</span>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 2rem; align-items: start;">
+        <!-- Add Student Form Card -->
+        <div class="card" id="add-student-card">
+            <div class="card-header">
+                <h2 class="card-title">Register New Student</h2>
+                <span class="badge badge-cyan">PreparedStatement CRUD</span>
+            </div>
+            <form th:action="@{/students}" th:object="${studentForm}" method="post" id="add-student-form">
+                <div class="form-group">
+                    <label class="form-label" for="student-name">Full Name <span style="color:var(--status-danger);">*</span></label>
+                    <input type="text" class="form-control" id="student-name" th:field="*{name}"
+                           placeholder="e.g. Margaret Hamilton" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="student-email">Email Address <span style="color:var(--status-danger);">*</span></label>
+                    <input type="email" class="form-control" id="student-email" th:field="*{email}"
+                           placeholder="e.g. margaret@exampro.edu" required />
+                    <small style="font-size:0.75rem; color:var(--text-dim); margin-top:0.25rem; display:block;">
+                        Must be a valid email containing '@' (enforced by User class validation).
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="student-reg">Registration Number <span style="color:var(--status-danger);">*</span></label>
+                    <input type="text" class="form-control" id="student-reg" th:field="*{registrationNumber}"
+                           placeholder="e.g. STU-205" required />
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" id="save-student-btn" style="width: 100%;">
+                        <span>➕ Register Student</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Student Information & Polymorphism Callout Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">OOP Polymorphism in Action</h2>
+                <span class="badge badge-emerald">User &rarr; Student</span>
+            </div>
+            <p style="font-size:0.92rem; color:var(--text-muted); line-height:1.6; margin-bottom:1rem;">
+                In the domain model, <span class="feature-code-tag">Student</span> extends <span class="feature-code-tag">User</span>.
+                Calling <span class="feature-code-tag">user.describe()</span> executes the polymorphic override:
+            </p>
+            <div style="background:rgba(0,0,0,0.35); padding:1rem; border-radius:var(--radius-sm); border:1px solid var(--border-glass); font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8;">
+                STUDENT: &lt;Name&gt; &lt;&lt;Email&gt;&gt; [&lt;Registration Number&gt;]
+            </div>
+            <p style="font-size:0.88rem; color:var(--text-dim); margin-top:1rem;">
+                Registered students can immediately be selected to take any available examination. Concurrency locks guard each student from duplicate simultaneous submissions.
+            </p>
+        </div>
+    </div>
+
+    <!-- Student Table Card -->
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Enrolled Students</h2>
+                <span style="font-size:0.85rem; color:var(--text-muted);">Stored via JDBC PreparedStatement in H2 <code class="feature-code-tag">students</code> table</span>
+            </div>
+            <div style="max-width: 280px; width: 100%;">
+                <input type="text" class="form-control" id="table-search-input" placeholder="🔍 Search students..." />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table" id="students-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Student Name</th>
+                        <th>Email</th>
+                        <th>Registration #</th>
+                        <th>Polymorphic Description (.describe())</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="student : ${students}">
+                        <td><code class="feature-code-tag" th:text="'#' + ${student.id}">#1</code></td>
+                        <td>
+                            <strong th:text="${student.name}" style="color:var(--text-white);">Ada Lovelace</strong>
+                            <span class="badge badge-indigo" style="margin-left:0.5rem;" th:text="${student.role}">STUDENT</span>
+                        </td>
+                        <td th:text="${student.email}">ada@exampro.edu</td>
+                        <td><span class="badge badge-cyan" th:text="${student.registrationNumber}">STU-101</span></td>
+                        <td>
+                            <span style="font-family:var(--font-mono); font-size:0.82rem; color:#93c5fd;" th:text="${student.describe()}">
+                                STUDENT: Ada Lovelace &lt;ada@exampro.edu&gt; [STU-101]
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <a th:href="@{/take-exam(studentId=${student.id})}" class="btn btn-sm btn-primary" title="Take an exam as this student">
+                                    Take Exam
+                                </a>
+                                <form th:action="@{/students/{id}/delete(id=${student.id})}" method="post"
+                                      onsubmit="return confirm('Are you sure you want to delete this student and their attempts?');" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete student">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(students)}">
+                        <td colspan="6" style="text-align:center; color:var(--text-dim); padding:2.5rem;">
+                            No students registered yet. Use the form above to register your first student!
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

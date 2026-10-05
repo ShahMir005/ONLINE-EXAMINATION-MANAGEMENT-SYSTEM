@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlhead('Exam Details: ' + ${exam.title})}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('exams')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                <span class="badge badge-indigo" th:text="'Exam #' + ${exam.id}">Exam #1</span>
+                <span class="badge badge-amber" th:text="${exam.duration.toMinutes()} + ' Minutes Duration'">30 Mins</span>
+            </div>
+            <h1 class="page-title" th:text="${exam.title}">Exam Title</h1>
+            <p class="page-subtitle">Configured questions, choices, answer keys, and point allocations.</p>
+        </div>
+        <div style="display:flex; gap:0.75rem;">
+            <a th:href="@{/exams/{id}/take(id=${exam.id})}" class="btn btn-primary">
+                <span>📝 Take Exam</span>
+            </a>
+            <a th:href="@{/results(examId=${exam.id})}" class="btn btn-secondary">
+                <span>📊 View Scores</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Configured Questions</h2>
+                <span style="font-size:0.85rem; color:var(--text-muted);"
+                      th:text="${exam.questions.size()} + ' questions totaling ' + ${exam.totalMarks()} + ' marks'">
+                    3 questions totaling 12 marks
+                </span>
+            </div>
+        </div>
+
+        <div th:each="q, iter : ${exam.questions}" class="question-item-card" style="margin-bottom:1.5rem;">
+            <div class="question-card-top">
+                <span class="question-number-tag" th:text="'Question #' + ${iter.count}">Question #1</span>
+                <div style="display:flex; gap:0.5rem;">
+                    <span class="badge" th:classappend="${q.type == 'MCQ'} ? 'badge-indigo' : 'badge-cyan'" th:text="${q.type}">MCQ</span>
+                    <span class="badge badge-emerald" th:text="${q.marks} + ' Marks'">5 Marks</span>
+                </div>
+            </div>
+
+            <p style="font-size:1.05rem; font-weight:600; color:var(--text-white); margin-bottom:1rem;" th:text="${q.prompt}">
+                Question Prompt
+            </p>
+
+            <div style="display:grid; gap:0.5rem;">
+                <div th:each="choice, cIter : ${q.choices()}"
+                     style="display:flex; align-items:center; gap:0.75rem; padding:0.6rem 0.9rem; border-radius:var(--radius-sm); border:1px solid var(--border-glass);"
+                     th:styleappend="${cIter.index == q.correctOptionIndex} ? 'background:rgba(16, 185, 129, 0.12); border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;' : 'background:rgba(255,255,255,0.02); color:var(--text-body);'">
+                    <span style="font-weight:700; font-size:0.85rem;"
+                          th:text="${q.type == 'MCQ'} ? ${#strings.substring('ABCD', cIter.index, cIter.index + 1)} + '.' : (${cIter.index == 0} ? 'T.' : 'F.')">A.</span>
+                    <span th:text="${choice}">Option choice text</span>
+                    <span th:if="${cIter.index == q.correctOptionIndex}" class="badge badge-emerald" style="margin-left:auto;">
+                        ✓ Correct Answer
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:1.5rem; display:flex; justify-content:space-between; align-items:center;">
+            <a th:href="@{/exams}" class="btn btn-secondary">&larr; Back to Exams</a>
+            <form th:action="@{/exams/{id}/delete(id=${exam.id})}" method="post"
+                  onsubmit="return confirm('Delete this exam?');">
+                <button type="submit" class="btn btn-outline-danger">Delete Exam</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

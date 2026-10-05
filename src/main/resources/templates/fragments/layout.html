@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="htmlhead(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ExamPro - Enterprise Online Examination Management System powered by Spring Boot 3.3.4, Spring Security, JDBC, and H2 database.">
+    <title th:text="${title != null ? title + ' | ExamPro' : 'ExamPro - Online Examination System'}">ExamPro</title>
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+
+<!-- Navbar Fragment -->
+<nav class="navbar" th:fragment="navbar(activeTab)">
+    <div class="navbar-container">
+        <a th:href="@{/}" class="brand-link" id="brand-logo-link">
+            <div class="brand-icon">XP</div>
+            <span>ExamPro</span>
+            <span class="brand-badge">v2.0</span>
+        </a>
+
+        <ul class="nav-links">
+            <!-- Dashboard links based on role -->
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')" th:classappend="${activeTab == 'admin-dashboard'} ? 'active'">
+                <a th:href="@{/admin/dashboard}" id="nav-admin-dashboard">Admin Dashboard</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('TEACHER')" th:classappend="${activeTab == 'teacher-dashboard'} ? 'active'">
+                <a th:href="@{/teacher/dashboard}" id="nav-teacher-dashboard">Teacher Dashboard</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('STUDENT')" th:classappend="${activeTab == 'student-dashboard'} ? 'active'">
+                <a th:href="@{/student/dashboard}" id="nav-student-dashboard">My Dashboard</a>
+            </li>
+
+            <!-- Role restricted navigation -->
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')" th:classappend="${activeTab == 'users'} ? 'active'">
+                <a th:href="@{/admin/users}" id="nav-users">Users</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasRole('ADMIN')" th:classappend="${activeTab == 'students'} ? 'active'">
+                <a th:href="@{/students}" id="nav-students">Students</a>
+            </li>
+            <li class="nav-item" sec:authorize="isAuthenticated()" th:classappend="${activeTab == 'exams'} ? 'active'">
+                <a th:href="@{/exams}" id="nav-exams">Exams</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'TEACHER')" th:classappend="${activeTab == 'create-exam'} ? 'active'">
+                <a th:href="@{/exams/new}" id="nav-create-exam">+ Create Exam</a>
+            </li>
+            <li class="nav-item" sec:authorize="hasAnyRole('STUDENT', 'ADMIN')" th:classappend="${activeTab == 'take-exam'} ? 'active'">
+                <a th:href="@{/take-exam}" id="nav-take-exam">Take Exam</a>
+            </li>
+            <li class="nav-item" sec:authorize="isAuthenticated()" th:classappend="${activeTab == 'results'} ? 'active'">
+                <a th:href="@{/results}" id="nav-results">Results</a>
+            </li>
+        </ul>
+
+        <div class="nav-cta">
+            <div class="system-status-pill" title="Spring Boot server :8080; H2 database connected">
+                <span class="pulse-dot"></span>
+                <span>Spring Boot server :8080; H2 database connected</span>
+            </div>
+
+            <!-- Authenticated User Details & Logout -->
+            <div sec:authorize="isAuthenticated()" style="display:flex; align-items:center; gap:0.75rem;">
+                <span style="font-size:0.85rem; color:var(--text-muted); display:flex; align-items:center; gap:0.4rem;">
+                    👤 <strong sec:authentication="name" style="color:var(--text-white);">user@exampro.edu</strong>
+                </span>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger" id="nav-logout-btn" title="Sign out of ExamPro">
+                        Logout
+                    </button>
+                </form>
+            </div>
+
+            <!-- Unauthenticated Login Links -->
+            <div sec:authorize="isAnonymous()" style="display:flex; align-items:center; gap:0.5rem;">
+                <a th:href="@{/student/login}" class="btn btn-sm btn-primary">Student Login</a>
+                <a th:href="@{/teacher/login}" class="btn btn-sm btn-secondary">Teacher</a>
+                <a th:href="@{/admin/login}" class="btn btn-sm btn-secondary">Admin</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Alert Messages Fragment -->
+<div th:fragment="alerts">
+    <div th:if="${successMessage}" class="alert alert-success" id="alert-success">
+        <span>✓</span>
+        <span th:text="${successMessage}">Operation successful!</span>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger" id="alert-danger">
+        <span>⚠️</span>
+        <span th:text="${errorMessage}">An error occurred.</span>
+    </div>
+    <div th:if="${infoMessage}" class="alert alert-info" id="alert-info">
+        <span>ℹ️</span>
+        <span th:text="${infoMessage}">Information notice.</span>
+    </div>
+</div>
+
+<!-- Footer Fragment -->
+<footer class="footer" th:fragment="footer">
+    <div class="footer-content">
+        <div>
+            <strong>ExamPro Examination Platform</strong> &mdash; Spring Boot 3.3.4 &amp; Spring Security RBAC
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-top:0.35rem;">
+                Review 1 Certified: OOP &bull; Inheritance &bull; Polymorphism &bull; JDBC CRUD &bull; Transactions &bull; Concurrency Locks
+            </div>
+        </div>
+        <ul class="footer-links">
+            <li><a th:href="@{/}">Home</a></li>
+            <li><a th:href="@{/student/login}">Student Portal</a></li>
+            <li><a th:href="@{/teacher/login}">Teacher Portal</a></li>
+            <li><a th:href="@{/admin/login}">Admin Portal</a></li>
+        </ul>
+    </div>
+</footer>
+
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

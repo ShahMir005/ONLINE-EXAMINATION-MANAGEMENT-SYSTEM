@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: htmlhead('Examinations')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('exams')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Available Examinations</h1>
+            <p class="page-subtitle">Browse published assessments, view question breakdowns, or launch an exam session.</p>
+        </div>
+        <div sec:authorize="hasAnyRole('ADMIN', 'TEACHER')">
+            <a th:href="@{/exams/new}" class="btn btn-primary" id="btn-create-new-exam">
+                <span>➕ Create New Exam</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Exam Cards Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.75rem; margin-bottom: 2.5rem;">
+        <div class="card" th:each="exam : ${exams}" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+                    <span class="badge badge-indigo" th:text="'Exam #' + ${exam.id}">Exam #1</span>
+                    <span class="badge badge-amber" th:text="${exam.duration.toMinutes()} + ' Minutes'">30 Minutes</span>
+                </div>
+
+                <h2 style="font-size:1.35rem; font-weight:700; color:var(--text-white); margin-bottom:0.75rem;" th:text="${exam.title}">
+                    Exam Title
+                </h2>
+
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.25rem;">
+                    <span class="badge badge-cyan" th:text="${exam.questions.size()} + ' Questions'">3 Questions</span>
+                    <span class="badge badge-emerald" th:text="${exam.totalMarks()} + ' Total Marks'">12 Total Marks</span>
+                </div>
+
+                <!-- Question preview -->
+                <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-glass); border-radius:var(--radius-sm); padding:0.85rem; margin-bottom:1.5rem;">
+                    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); margin-bottom:0.5rem;">
+                        Question Types Configured:
+                    </div>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <span th:each="q : ${exam.questions}" class="badge"
+                              th:classappend="${q.type == 'MCQ'} ? 'badge-indigo' : 'badge-cyan'"
+                              th:text="${q.type} + ' (' + ${q.marks} + 'm)'">
+                            MCQ (5m)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.75rem; border-top:1px solid var(--border-glass); padding-top:1rem;">
+                <a th:href="@{/exams/{id}/take(id=${exam.id})}" class="btn btn-primary btn-sm" style="flex:1;">
+                    <span>📝 Take Exam</span>
+                </a>
+                <a th:href="@{/results(examId=${exam.id})}" class="btn btn-secondary btn-sm" title="View results for this exam">
+                    <span>📊 Results</span>
+                </a>
+                <a th:href="@{/exams/{id}(id=${exam.id})}" class="btn btn-secondary btn-sm" title="View full question details">
+                    <span>🔍 Details</span>
+                </a>
+                <form sec:authorize="hasAnyRole('ADMIN', 'TEACHER')" th:action="@{/exams/{id}/delete(id=${exam.id})}" method="post"
+                      onsubmit="return confirm('Are you sure you want to delete this exam and all its attempts?');" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete exam">
+                        ✕
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div th:if="${#lists.isEmpty(exams)}" class="card" style="text-align:center; padding:3.5rem 2rem;">
+        <div style="font-size:3rem; margin-bottom:1rem;">📚</div>
+        <h3 style="font-size:1.5rem; font-weight:700; color:var(--text-white); margin-bottom:0.5rem;">No Exams Configured Yet</h3>
+        <p style="color:var(--text-muted); max-width:480px; margin:0 auto 1.5rem auto;">
+            Get started by creating your first examination with custom Multiple Choice and True/False questions.
+        </p>
+        <div style="display:flex; justify-content:center; gap:1rem;" sec:authorize="hasAnyRole('ADMIN', 'TEACHER')">
+            <a th:href="@{/exams/new}" class="btn btn-primary">➕ Create First Exam</a>
+            <form th:action="@{/demo/seed}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary">🔄 Load Demo Exam</button>
+            </form>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

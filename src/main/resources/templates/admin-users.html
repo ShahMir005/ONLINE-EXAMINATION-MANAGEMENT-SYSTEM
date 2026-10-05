@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: htmlhead('User Management')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('users')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                <span class="badge badge-rose">Admin Only Area</span>
+                <span class="badge badge-indigo">Role: ADMIN</span>
+                <span class="badge badge-cyan">BCrypt Password Protection</span>
+            </div>
+            <h1 class="page-title">User Account Management</h1>
+            <p class="page-subtitle">Provision Admin, Teacher, and Student credentials with salted BCrypt hashing and duplicate-email validation.</p>
+        </div>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <a th:href="@{/admin/dashboard}" class="btn btn-secondary" id="back-admin-dashboard-btn">&larr; Admin Dashboard</a>
+            <a th:href="@{/students}" class="btn btn-secondary" id="view-students-btn">👥 Student Directory</a>
+        </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon indigo">👤</div>
+            <div class="stat-value" th:text="${totalUsers}" id="stat-total-users">0</div>
+            <div class="stat-label">Total Registered Accounts</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">🛡️</div>
+            <div class="stat-value" th:text="${adminCount}" id="stat-admin-count">0</div>
+            <div class="stat-label">System Administrators</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan">📚</div>
+            <div class="stat-value" th:text="${teacherCount}" id="stat-teacher-count">0</div>
+            <div class="stat-label">Instructors / Teachers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon emerald">🎓</div>
+            <div class="stat-value" th:text="${studentCount}" id="stat-student-count">0</div>
+            <div class="stat-label">Candidate Students</div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Create Account & Password Reset Forms -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 2rem; margin-bottom: 2.5rem; align-items: start;">
+        
+        <!-- Create User Card -->
+        <div class="card" id="create-user-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Provision New Account</h2>
+                    <span style="font-size:0.85rem; color:var(--text-muted);">Create Admin, Teacher, or Student accounts</span>
+                </div>
+                <span class="badge badge-emerald">BCrypt Hashing</span>
+            </div>
+
+            <form th:action="@{/admin/users}" th:object="${createForm}" method="post" id="create-user-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="form-group">
+                    <label class="form-label" for="user-fullname">Full Name <span style="color:var(--status-danger);">*</span></label>
+                    <input type="text" class="form-control" id="user-fullname" th:field="*{fullName}"
+                           placeholder="e.g. Grace Hopper" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="user-email">Email Address <span style="color:var(--status-danger);">*</span></label>
+                    <input type="email" class="form-control" id="user-email" th:field="*{email}"
+                           placeholder="e.g. grace@exampro.edu" required />
+                    <small style="font-size:0.75rem; color:var(--text-dim); margin-top:0.25rem; display:block;">
+                        Must be unique. Checked against existing records to prevent duplicates.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="user-role">Account Role <span style="color:var(--status-danger);">*</span></label>
+                    <select class="form-control" id="user-role" th:field="*{role}" required onchange="toggleStudentRegField()">
+                        <option value="STUDENT">STUDENT - Candidate assessment portal &amp; scorecards</option>
+                        <option value="TEACHER">TEACHER - Exam authoring, questions &amp; results oversight</option>
+                        <option value="ADMIN">ADMIN - Full system governance &amp; user management</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="student-reg-group">
+                    <label class="form-label" for="user-reg">Registration Number <span style="font-size:0.75rem; color:var(--text-dim);">(Optional for Students)</span></label>
+                    <input type="text" class="form-control" id="user-reg" th:field="*{registrationNumber}"
+                           placeholder="e.g. STU-301 (Auto-generated if blank)" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="user-password">Temporary Password <span style="color:var(--status-danger);">*</span></label>
+                    <input type="password" class="form-control" id="user-password" th:field="*{password}"
+                           placeholder="Enter at least 6 characters (e.g. DemoPass123!)" required minlength="6" />
+                    <small style="font-size:0.75rem; color:var(--status-warning); margin-top:0.35rem; display:block;">
+                        🔒 Never use real Gmail or personal passwords. Passwords are automatically hashed via BCrypt before storage.
+                    </small>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-create-user" style="width: 100%;">
+                        <span>➕ Create User Account</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Secure Change Password Card -->
+        <div class="card" id="change-password-card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Secure Password Reset</h2>
+                    <span style="font-size:0.85rem; color:var(--text-muted);">Reset and re-hash credentials for any user</span>
+                </div>
+                <span class="badge badge-amber">Instant Hash Update</span>
+            </div>
+
+            <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1.25rem;">
+                Select a user account to overwrite their password hash. The new password takes effect immediately upon submission.
+            </p>
+
+            <form th:action="@{/admin/users/1/change-password}" method="post" id="admin-change-password-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+                <div class="form-group">
+                    <label class="form-label" for="pwd-target-user">Target User Account <span style="color:var(--status-danger);">*</span></label>
+                    <select class="form-control" id="pwd-target-user" required onchange="updatePasswordActionUrl(this.value)">
+                        <option value="">-- Select an account to change password --</option>
+                        <option th:each="u : ${users}"
+                                th:value="${u.id}"
+                                th:text="${u.fullName} + ' (' + ${u.email} + ') [' + ${u.role} + ']'">
+                            Ada Lovelace (ada@exampro.edu) [STUDENT]
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="newPassword">New Password <span style="color:var(--status-danger);">*</span></label>
+                    <input type="password" class="form-control" id="newPassword" name="newPassword"
+                           placeholder="Enter new password (min 6 characters)" required minlength="6" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm New Password <span style="color:var(--status-danger);">*</span></label>
+                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                           placeholder="Re-type new password" required minlength="6" />
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-glass); border-radius:var(--radius-sm); padding:0.85rem; margin-top:1.25rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.82rem;">
+                        <span>🔐</span>
+                        <strong>Cryptographic Guarantee:</strong>
+                    </div>
+                    <p style="font-size:0.78rem; color:var(--text-dim); margin-top:0.25rem; line-height:1.4;">
+                        BCrypt generates a random 128-bit salt per hash. Plaintext credentials are discarded immediately and never persisted or logged.
+                    </p>
+                </div>
+
+                <div style="margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-warning" id="btn-submit-change-password" style="width: 100%;">
+                        <span>🔑 Update User Password</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registered Accounts Table -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Registered Accounts Directory (<code class="feature-code-tag">app_users</code>)</h2>
+                <span style="font-size:0.85rem; color:var(--text-muted);">Stored with salted BCrypt hashes in embedded H2 database</span>
+            </div>
+            <div style="max-width: 280px; width: 100%;">
+                <input type="text" class="form-control" id="table-search-input" placeholder="🔍 Search accounts..." />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table" id="users-directory-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User Name</th>
+                        <th>Email Address</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${users}">
+                        <td><code class="feature-code-tag" th:text="'#' + ${u.id}">#1</code></td>
+                        <td>
+                            <strong th:text="${u.fullName}" style="color:var(--text-white);">Full Name</strong>
+                        </td>
+                        <td th:text="${u.email}">user@exampro.edu</td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${u.role == 'ADMIN'} ? 'badge-rose' : (${u.role == 'TEACHER'} ? 'badge-cyan' : 'badge-emerald')"
+                                  th:text="${u.role}">
+                                STUDENT
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-emerald" th:if="${u.enabled}">ACTIVE</span>
+                            <span class="badge badge-rose" th:unless="${u.enabled}">DISABLED</span>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                <!-- Quick Reset Pwd helper button -->
+                                <button type="button" class="btn btn-sm btn-secondary"
+                                        th:onclick="'selectUserForPasswordReset(' + ${u.id} + ');'"
+                                        title="Select this user in the Password Reset form above">
+                                    🔑 Reset Pwd
+                                </button>
+
+                                <!-- Toggle Active/Disabled status -->
+                                <form th:action="@{/admin/users/{id}/toggle-status(id=${u.id})}" method="post" style="display:inline;">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="btn btn-sm btn-secondary"
+                                            th:title="${u.enabled} ? 'Disable account' : 'Enable account'">
+                                        <span th:text="${u.enabled} ? 'Disable' : 'Enable'">Toggle</span>
+                                    </button>
+                                </form>
+
+                                <!-- Delete user -->
+                                <form th:action="@{/admin/users/{id}/delete(id=${u.id})}" method="post"
+                                      onsubmit="return confirm('Are you sure you want to permanently delete this user account?');"
+                                      style="display:inline;">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete account">
+                                        ✕
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(users)}">
+                        <td colspan="6" style="text-align:center; color:var(--text-dim); padding:2.5rem;">
+                            No user accounts found in <code class="feature-code-tag">app_users</code>.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script>
+    function updatePasswordActionUrl(userId) {
+        const form = document.getElementById('admin-change-password-form');
+        if (userId) {
+            form.action = '/admin/users/' + userId + '/change-password';
+        }
+    }
+
+    function selectUserForPasswordReset(userId) {
+        const select = document.getElementById('pwd-target-user');
+        select.value = userId;
+        updatePasswordActionUrl(userId);
+        document.getElementById('change-password-card').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('newPassword').focus();
+    }
+
+    function toggleStudentRegField() {
+        const role = document.getElementById('user-role').value;
+        const regGroup = document.getElementById('student-reg-group');
+        if (role === 'STUDENT') {
+            regGroup.style.display = 'block';
+        } else {
+            regGroup.style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>

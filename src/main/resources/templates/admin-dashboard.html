@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: htmlhead('Admin Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('admin-dashboard')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+                <span class="badge badge-rose">Administrator Control Center</span>
+                <span class="badge badge-indigo">Role: ADMIN</span>
+            </div>
+            <h1 class="page-title">Admin Dashboard</h1>
+            <p class="page-subtitle">Full system governance: candidate registrations, examinations, role accounts, and results oversight.</p>
+        </div>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+            <a th:href="@{/admin/users}" class="btn btn-primary" id="admin-manage-users-btn">🔐 User Management</a>
+            <a th:href="@{/students}" class="btn btn-secondary" id="admin-manage-students-btn">👥 Manage Students</a>
+            <a th:href="@{/exams/new}" class="btn btn-secondary" id="admin-create-exam-btn">➕ Create Exam</a>
+            <a th:href="@{/results}" class="btn btn-secondary" id="admin-results-btn">📊 Full Results</a>
+        </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon indigo">👥</div>
+            <div class="stat-value" th:text="${studentCount}" id="admin-stat-students">0</div>
+            <div class="stat-label">Enrolled Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan">📚</div>
+            <div class="stat-value" th:text="${examCount}" id="admin-stat-exams">0</div>
+            <div class="stat-label">Configured Exams</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">❓</div>
+            <div class="stat-value" th:text="${questionCount}" id="admin-stat-questions">0</div>
+            <div class="stat-label">Total Questions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon emerald">🏆</div>
+            <div class="stat-value" th:text="${attemptCount}" id="admin-stat-attempts">0</div>
+            <div class="stat-label">Total Submissions</div>
+        </div>
+    </div>
+
+    <!-- Quick Sections Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 2rem;">
+        <!-- User Accounts & Roles -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Security Accounts (app_users)</h2>
+                    <span style="font-size:0.85rem; color:var(--text-muted);">BCrypt hashed authentication accounts in H2</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="badge badge-emerald" th:text="${users.size()} + ' Accounts'">0 Accounts</span>
+                    <a th:href="@{/admin/users}" class="btn btn-sm btn-primary">Manage Users &rarr;</a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="u : ${users}">
+                            <td><code class="feature-code-tag" th:text="'#' + ${u.id}">#1</code></td>
+                            <td><strong th:text="${u.fullName}" style="color:var(--text-white);">Admin User</strong></td>
+                            <td th:text="${u.email}">admin@exampro.edu</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${u.role == 'ADMIN'} ? 'badge-rose' : (${u.role == 'TEACHER'} ? 'badge-cyan' : 'badge-emerald')"
+                                      th:text="${u.role}">
+                                    ADMIN
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-emerald" th:if="${u.enabled}">Active</span>
+                                <span class="badge badge-rose" th:unless="${u.enabled}">Disabled</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Published Exams -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Published Examinations</h2>
+                    <span style="font-size:0.85rem; color:var(--text-muted);">Active assessment configurations</span>
+                </div>
+                <a th:href="@{/exams}" class="btn btn-sm btn-secondary">All Exams &rarr;</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Exam Title</th>
+                            <th>Duration</th>
+                            <th>Questions</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="ex : ${exams}">
+                            <td><strong th:text="${ex.title}" style="color:var(--text-white);">Exam Title</strong></td>
+                            <td><span th:text="${ex.duration.toMinutes()} + ' mins'">30 mins</span></td>
+                            <td><span class="badge badge-indigo" th:text="${ex.questions.size()} + ' Qs (' + ${ex.totalMarks()} + ' pts)'">3 Qs</span></td>
+                            <td>
+                                <div style="display:flex; gap:0.4rem;">
+                                    <a th:href="@{/exams/{id}/take(id=${ex.id})}" class="btn btn-sm btn-primary">Take</a>
+                                    <a th:href="@{/results(examId=${ex.id})}" class="btn btn-sm btn-secondary">Scores</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlhead('Create New Examination')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('create-exam')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Create Examination</h1>
+            <p class="page-subtitle">Configure an assessment with Multiple Choice (MCQ) and True / False questions, committed atomically via JDBC Transactions.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem;">
+            <div style="background:var(--surface-glass); border:1px solid var(--border-glass); border-radius:var(--radius-sm); padding:0.5rem 1rem;">
+                <span style="font-size:0.8rem; color:var(--text-muted);">Questions: </span>
+                <strong id="total-questions-count" style="color:var(--text-white);">2</strong>
+                <span style="margin: 0 0.5rem; color:var(--border-glass);">|</span>
+                <span style="font-size:0.8rem; color:var(--text-muted);">Total Marks: </span>
+                <strong id="total-marks-count" style="color:#34d399;">7</strong>
+            </div>
+        </div>
+    </div>
+
+    <form th:action="@{/exams}" th:object="${examForm}" method="post" id="create-exam-form">
+        <!-- Exam Meta Settings Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">General Exam Details</h2>
+                <span class="badge badge-indigo">Basic Configuration</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label" for="exam-title">Exam Title <span style="color:var(--status-danger);">*</span></label>
+                    <input type="text" class="form-control" id="exam-title" th:field="*{title}"
+                           placeholder="e.g. Advanced Java OOP & JDBC Certification Exam" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="exam-duration">Duration (Minutes) <span style="color:var(--status-danger);">*</span></label>
+                    <input type="number" class="form-control" id="exam-duration" th:field="*{durationMinutes}"
+                           min="1" max="300" value="30" required />
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Section Card -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Question Builder</h2>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
+                        Add Multiple Choice (MCQ) and True/False (TF) questions. Every question is mapped into OOP polymorphic hierarchies.
+                    </p>
+                </div>
+                <div style="display:flex; gap:0.75rem;">
+                    <button type="button" class="btn btn-sm btn-primary" id="add-mcq-btn">
+                        <span>➕ Add MCQ Question</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="add-tf-btn">
+                        <span>➕ Add True/False</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Questions Container -->
+            <div id="questions-container">
+                <!-- Question 0: MCQ (Default) -->
+                <div class="question-item-card" data-index="0">
+                    <div class="question-card-top">
+                        <span class="question-number-tag question-number-display">Question #1</span>
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <span class="badge badge-indigo">Multiple Choice (MCQ)</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" title="Remove question">✕</button>
+                        </div>
+                    </div>
+                    <input type="hidden" class="q-type-input" name="questions[0].type" value="MCQ" />
+                    <div class="form-group">
+                        <label class="form-label">Question Prompt <span style="color:var(--status-danger);">*</span></label>
+                        <textarea class="form-control q-prompt-input" name="questions[0].prompt" rows="2"
+                                  placeholder="Enter the question prompt here..." required>Which Java feature enables runtime polymorphism through method overriding?</textarea>
+                    </div>
+                    <div class="form-row" style="margin-bottom: 1rem;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Marks</label>
+                            <input type="number" class="form-control q-marks-input" name="questions[0].marks" value="5" min="1" max="100" required />
+                        </div>
+                        <div class="form-group" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:center;">
+                            <span style="font-size:0.85rem; color:var(--text-muted);">Select the radio button next to the correct choice below.</span>
+                        </div>
+                    </div>
+                    <label class="form-label">Options (MCQ Choices):</label>
+                    <div class="options-builder-grid">
+                        <div class="option-input-wrapper">
+                            <input type="radio" class="correct-selector-radio q-correct-radio" name="questions[0].correctOption" value="0" title="Correct Choice" />
+                            <input type="text" class="form-control q-option-input" name="questions[0].options[0]" value="Encapsulation" required />
+                        </div>
+                        <div class="option-input-wrapper">
+                            <input type="radio" class="correct-selector-radio q-correct-radio" name="questions[0].correctOption" value="1" checked title="Correct Choice" />
+                            <input type="text" class="form-control q-option-input" name="questions[0].options[1]" value="Dynamic Method Dispatch" required />
+                        </div>
+                        <div class="option-input-wrapper">
+                            <input type="radio" class="correct-selector-radio q-correct-radio" name="questions[0].correctOption" value="2" title="Correct Choice" />
+                            <input type="text" class="form-control q-option-input" name="questions[0].options[2]" value="Static Binding" />
+                        </div>
+                        <div class="option-input-wrapper">
+                            <input type="radio" class="correct-selector-radio q-correct-radio" name="questions[0].correctOption" value="3" title="Correct Choice" />
+                            <input type="text" class="form-control q-option-input" name="questions[0].options[3]" value="Method Overloading" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question 1: TF (Default) -->
+                <div class="question-item-card" data-index="1">
+                    <div class="question-card-top">
+                        <span class="question-number-tag question-number-display">Question #2</span>
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <span class="badge badge-cyan">True / False</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" title="Remove question">✕</button>
+                        </div>
+                    </div>
+                    <input type="hidden" class="q-type-input" name="questions[1].type" value="TF" />
+                    <div class="form-group">
+                        <label class="form-label">Statement / Question Prompt <span style="color:var(--status-danger);">*</span></label>
+                        <textarea class="form-control q-prompt-input" name="questions[1].prompt" rows="2"
+                                  placeholder="Enter statement..." required>An interface can be instantiated directly using the new keyword.</textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Marks</label>
+                            <input type="number" class="form-control q-marks-input" name="questions[1].marks" value="2" min="1" max="100" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Correct Answer</label>
+                            <div style="display:flex; gap:1.5rem; margin-top:0.5rem;">
+                                <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                                    <input type="radio" class="q-tf-radio" name="questions[1].tfCorrect" value="true" /> True
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                                    <input type="radio" class="q-tf-radio" name="questions[1].tfCorrect" value="false" checked /> False
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Section -->
+            <div style="margin-top:2.5rem; display:flex; justify-content:flex-end; gap:1rem; border-top:1px solid var(--border-glass); padding-top:1.5rem;">
+                <a th:href="@{/exams}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary btn-lg" id="publish-exam-btn">
+                    <span>🚀 Publish Examination</span>
+                </button>
+            </div>
+        </div>
+    </form>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>

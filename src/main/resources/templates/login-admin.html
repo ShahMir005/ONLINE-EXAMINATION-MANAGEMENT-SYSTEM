@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlhead('Admin Login')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('admin-login')}"></nav>
+
+<main class="container" style="max-width: 520px; margin-top: 3rem;">
+    <!-- Invalid login & Role mismatch messages -->
+    <div th:if="${param.error != null and param.error[0] == 'role_mismatch'}" class="alert alert-danger" id="login-role-error">
+        <span>⚠️</span>
+        <span><strong>Role Mismatch:</strong> This account does not possess Administrator privileges. Please login via the Teacher or Student portal.</span>
+    </div>
+    <div th:if="${param.error != null and param.error[0] == 'true'}" class="alert alert-danger" id="login-auth-error">
+        <span>⚠️</span>
+        <span><strong>Invalid Credentials:</strong> Incorrect email or password. Please try again.</span>
+    </div>
+    <div th:if="${param.logout != null}" class="alert alert-success" id="login-logout-success">
+        <span>✓</span>
+        <span>You have been successfully signed out of the Administrator session.</span>
+    </div>
+
+    <!-- Login Card -->
+    <div class="card" style="box-shadow: var(--shadow-lg), var(--shadow-glow);">
+        <div class="card-header" style="text-align: center; display: block; border-bottom: none; padding-bottom: 0;">
+            <div class="brand-icon" style="margin: 0 auto 1rem auto; width: 48px; height: 48px; font-size: 1.25rem;">XP</div>
+            <h1 class="card-title" style="font-size: 1.75rem;">Administrator Portal</h1>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                Authorized system administrative access only
+            </p>
+            <div style="margin-top: 0.75rem;">
+                <span class="badge badge-rose">Role: ADMIN Required</span>
+            </div>
+        </div>
+
+        <form th:action="@{/admin/login}" method="post" id="admin-login-form" style="margin-top: 1.5rem;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="form-group">
+                <label class="form-label" for="username">Administrator Email</label>
+                <input type="email" class="form-control" id="username" name="username"
+                       placeholder="admin@exampro.edu" required autofocus />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password"
+                       placeholder="Enter password..." required />
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <button type="submit" class="btn btn-primary" id="admin-login-submit" style="width: 100%;">
+                    <span>🔐 Login to Admin Dashboard</span>
+                </button>
+            </div>
+        </form>
+
+        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-glass); text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+            <div>Demo Credentials: <code class="feature-code-tag">admin@exampro.edu</code> / <code class="feature-code-tag">AdminPassword123!</code></div>
+            <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 1rem;">
+                <a th:href="@{/teacher/login}">Teacher Login &rarr;</a>
+                <a th:href="@{/student/login}">Student Login &rarr;</a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

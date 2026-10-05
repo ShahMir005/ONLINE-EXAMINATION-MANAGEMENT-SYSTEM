@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: htmlhead('Scorecard: ' + (${student != null} ? ${student.name} : 'Attempt') + ' - ' + (${exam != null} ? ${exam.title} : 'Exam'))}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('results')}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: alerts}"></div>
+
+    <!-- Score Hero Card -->
+    <section class="score-hero-card">
+        <div class="score-display-ring" th:classappend="${passed} ? 'pass' : 'fail'">
+            <div class="score-number" th:text="${attempt.score}">12</div>
+            <div class="score-max" th:text="'out of ' + ${totalMarks}">out of 12</div>
+        </div>
+
+        <h1 style="font-size:2.2rem; font-weight:800; color:var(--text-white); margin-bottom:0.5rem;">
+            <span th:text="${passed} ? '🎉 Assessment Passed!' : 'Needs Improvement'">Assessment Result</span>
+        </h1>
+        <p style="color:var(--text-muted); font-size:1.1rem; margin-bottom:1.5rem;">
+            Final Score: <strong th:text="${attempt.score} + ' / ' + ${totalMarks}">12 / 12</strong> &bull;
+            Achievement: <strong th:text="${percentage} + '%'">100%</strong>
+        </p>
+
+        <!-- Meta Grid -->
+        <div class="scorecard-meta-grid">
+            <div class="meta-box">
+                <div class="meta-box-label">Student Candidate</div>
+                <div class="meta-box-value" th:text="${student != null} ? ${student.name} : 'Unknown'">Ada Lovelace</div>
+                <div style="font-size:0.8rem; color:var(--text-dim);" th:text="${student != null} ? ${student.registrationNumber} : ''">STU-101</div>
+            </div>
+            <div class="meta-box">
+                <div class="meta-box-label">Examination</div>
+                <div class="meta-box-value" th:text="${exam != null} ? ${exam.title} : 'Exam #' + ${attempt.examId}">Exam Title</div>
+                <div style="font-size:0.8rem; color:var(--text-dim);" th:text="${exam != null} ? ${exam.duration.toMinutes()} + ' mins' : ''">30 mins</div>
+            </div>
+            <div class="meta-box">
+                <div class="meta-box-label">Submitted At</div>
+                <div class="meta-box-value" style="font-size:0.92rem;" th:text="${submittedAtFormatted}">Oct 05, 2026 03:00</div>
+                <div style="font-size:0.8rem; color:var(--text-dim);">H2 Transaction Id: <span th:text="'#' + ${attempt.id}">#1</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Question by Question Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Question Breakdown</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.25rem;">
+                    Detailed response analysis comparing chosen answers against stored correct options.
+                </p>
+            </div>
+            <div>
+                <span class="badge badge-indigo" th:text="${questionResults.size()} + ' Questions Evaluated'">3 Questions</span>
+            </div>
+        </div>
+
+        <div th:each="qr : ${questionResults}" class="result-question-card" th:classappend="${qr.correct} ? 'correct' : 'incorrect'">
+            <div class="result-question-header">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="badge" th:classappend="${qr.correct} ? 'badge-emerald' : 'badge-rose'"
+                          th:text="${qr.correct} ? '✓ Correct' : '✕ Incorrect'">
+                        ✓ Correct
+                    </span>
+                    <strong style="color:var(--text-white);" th:text="'Question #' + ${qr.questionNumber}">Question #1</strong>
+                    <span class="badge badge-indigo" th:text="${qr.type}">MCQ</span>
+                </div>
+                <div>
+                    <span style="font-weight:700;" th:classappend="${qr.correct} ? 'text-emerald' : 'text-rose'"
+                          th:text="${qr.awardedMarks} + ' / ' + ${qr.marks} + ' marks'">
+                        5 / 5 marks
+                    </span>
+                </div>
+            </div>
+
+            <p style="font-size:1.02rem; color:var(--text-white); margin-bottom:1rem; font-weight:500;" th:text="${qr.prompt}">
+                Question Prompt Text
+            </p>
+
+            <div class="answers-comparison-grid">
+                <div class="answer-pill" th:classappend="${qr.correct} ? 'chosen-correct' : 'chosen-wrong'">
+                    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.25rem;">
+                        Candidate's Response:
+                    </div>
+                    <strong th:text="${qr.selectedText}">Selected Choice</strong>
+                </div>
+
+                <div class="answer-pill correct-reference" th:if="${!qr.correct}">
+                    <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.25rem;">
+                        Correct Answer Key:
+                    </div>
+                    <strong th:text="${qr.correctText}">Correct Choice</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Actions -->
+        <div style="margin-top:2rem; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1rem; border-top:1px solid var(--border-glass); padding-top:1.5rem;">
+            <a th:href="@{/results}" class="btn btn-secondary">&larr; Back to Results</a>
+            <div style="display:flex; gap:1rem;">
+                <a th:href="@{/take-exam}" class="btn btn-primary">Take Another Exam</a>
+                <a th:href="@{/}" class="btn btn-secondary">Home</a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<script th:src="@{/js/main.js}"></script>
+</body>
+</html>
