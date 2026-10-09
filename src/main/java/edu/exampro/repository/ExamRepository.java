@@ -3,7 +3,6 @@ package edu.exampro.repository;
 import edu.exampro.db.Database;
 import edu.exampro.db.Transactions;
 import edu.exampro.exception.ExamException;
-import edu.exampro.exception.ValidationException;
 import edu.exampro.model.Exam;
 import edu.exampro.model.MultipleChoiceQuestion;
 import edu.exampro.model.Question;
@@ -49,12 +48,6 @@ public final class ExamRepository implements CrudRepository<Exam> {
      * or nothing is saved at all.
      */
     public Exam createWithQuestions(Exam exam) {
-        if (exam.getId() != null) {
-            throw new ValidationException("Exam is already stored with id " + exam.getId());
-        }
-        if (exam.getQuestions().isEmpty()) {
-            throw new ValidationException("An exam needs at least one question");
-        }
         StoredIds ids = Transactions.run("Could not create exam", connection -> {
             long examId = insertExam(connection, exam);
             List<Long> questionIds = new ArrayList<>();

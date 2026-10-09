@@ -5,7 +5,7 @@ import java.util.List;
 
 /** What the submission service needs from storage. An interface, so it can be replaced in tests. */
 public interface AttemptRepository {
-    /** Saves the attempt and its answers atomically; throws DuplicateSubmissionException if one exists. */
+    /** Saves the attempt and its answers atomically. Duplicate-submission policy is handled by the service. */
     Attempt save(Attempt attempt);
 
     boolean existsByExamAndStudent(long examId, long studentId);

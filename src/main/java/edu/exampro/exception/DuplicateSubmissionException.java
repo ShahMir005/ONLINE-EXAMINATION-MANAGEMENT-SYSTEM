@@ -1,6 +1,6 @@
 package edu.exampro.exception;
 
-/** Thrown when a student tries to submit the same exam twice. */
+/** Thrown when a student submits the same exam more than once, including while an earlier submission is in flight. */
 public class DuplicateSubmissionException extends ExamException {
     private static final long serialVersionUID = 1L;
 

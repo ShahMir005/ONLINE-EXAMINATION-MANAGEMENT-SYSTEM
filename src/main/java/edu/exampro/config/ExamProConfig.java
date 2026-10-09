@@ -6,6 +6,7 @@ import edu.exampro.model.AppUser;
 import edu.exampro.repository.AppUserRepository;
 import edu.exampro.repository.AttemptRepository;
 import edu.exampro.repository.ExamRepository;
+import edu.exampro.repository.ExamSessionRepository;
 import edu.exampro.repository.JdbcAttemptRepository;
 import edu.exampro.repository.StudentRepository;
 import edu.exampro.service.ExamCatalog;
@@ -39,6 +40,11 @@ public class ExamProConfig {
     @Bean
     public AppUserRepository appUserRepository() {
         return new AppUserRepository();
+    }
+
+    @Bean
+    public ExamSessionRepository examSessionRepository() {
+        return new ExamSessionRepository();
     }
 
     @Bean

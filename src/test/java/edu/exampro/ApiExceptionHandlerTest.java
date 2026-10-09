@@ -1,6 +1,7 @@
 package edu.exampro;
 
 import edu.exampro.exception.DuplicateSubmissionException;
+import edu.exampro.exception.ExamException;
 import edu.exampro.exception.ValidationException;
 import edu.exampro.web.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,14 @@ class ApiExceptionHandlerTest {
             .andExpect(jsonPath("$.error").value("Answers are required"));
     }
 
+    @Test
+    void examFailureReturnsBadRequestJson() throws Exception {
+        mockMvc.perform(get("/test/exam"))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.error").value("Exam session has expired"));
+    }
+
     @RestController
     static class ExceptionThrowingController {
         @GetMapping("/test/duplicate")
@@ -53,6 +62,11 @@ class ApiExceptionHandlerTest {
         @GetMapping("/test/validation")
         void validationFailure() {
             throw new ValidationException("Answers are required");
+        }
+
+        @GetMapping("/test/exam")
+        void examFailure() {
+            throw new ExamException("Exam session has expired");
         }
     }
 }

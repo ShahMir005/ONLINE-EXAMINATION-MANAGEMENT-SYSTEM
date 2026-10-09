@@ -1,6 +1,5 @@
 package edu.exampro.web.api;
 
-import edu.exampro.exception.ExamException;
 import edu.exampro.model.AppUser;
 import edu.exampro.model.Student;
 import edu.exampro.repository.AppUserRepository;
@@ -100,33 +99,29 @@ public class StudentApiController {
                 "A student with email '" + email + "' is already registered"));
         }
 
-        try {
-            Student newStudent = new Student(null, req.name.trim(), email, req.registrationNumber.trim());
-            Student saved = studentRepository.save(newStudent);
+        Student newStudent = new Student(null, req.name.trim(), email, req.registrationNumber.trim());
+        Student saved = studentRepository.save(newStudent);
 
-            // Automatically create login account for the student if not already present with a random one-time password
-            String oneTimePassword = edu.exampro.security.PasswordGenerator.generateOneTimePassword();
-            if (appUserRepository.findByEmail(email).isEmpty()) {
-                appUserRepository.save(new AppUser(
-                    null,
-                    saved.getName(),
-                    saved.getEmail(),
-                    passwordEncoder.encode(oneTimePassword),
-                    "STUDENT",
-                    true
-                ));
-            }
-
-            Map<String, Object> resp = new LinkedHashMap<>();
-            resp.put("id", saved.getId());
-            resp.put("name", saved.getName());
-            resp.put("email", saved.getEmail());
-            resp.put("registrationNumber", saved.getRegistrationNumber());
-            resp.put("oneTimePassword", oneTimePassword);
-            return ResponseEntity.status(HttpStatus.CREATED).body(resp);
-        } catch (ExamException ee) {
-            return ResponseEntity.badRequest().body(Map.of("error", ee.getMessage()));
+        // Automatically create login account for the student if not already present with a random one-time password
+        String oneTimePassword = edu.exampro.security.PasswordGenerator.generateOneTimePassword();
+        if (appUserRepository.findByEmail(email).isEmpty()) {
+            appUserRepository.save(new AppUser(
+                null,
+                saved.getName(),
+                saved.getEmail(),
+                passwordEncoder.encode(oneTimePassword),
+                "STUDENT",
+                true
+            ));
         }
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("id", saved.getId());
+        resp.put("name", saved.getName());
+        resp.put("email", saved.getEmail());
+        resp.put("registrationNumber", saved.getRegistrationNumber());
+        resp.put("oneTimePassword", oneTimePassword);
+        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
     @DeleteMapping("/{id}")

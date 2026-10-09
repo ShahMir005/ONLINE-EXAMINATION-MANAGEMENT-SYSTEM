@@ -1,6 +1,6 @@
 package edu.exampro.exception;
 
-/** Thrown when an object is created or used with invalid data (blank name, wrong answer id, ...). */
+/** Thrown when model or service input is invalid, such as a blank required field or an answer for another exam. */
 public class ValidationException extends ExamException {
     private static final long serialVersionUID = 1L;
 

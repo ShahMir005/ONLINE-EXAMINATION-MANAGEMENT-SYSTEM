@@ -1,6 +1,5 @@
 package edu.exampro.web.api;
 
-import edu.exampro.exception.DuplicateSubmissionException;
 import edu.exampro.exception.ExamException;
 import edu.exampro.model.Attempt;
 import edu.exampro.model.Exam;
@@ -192,18 +191,14 @@ public class ExamApiController {
             return ResponseEntity.badRequest().body(Map.of("error", "Please provide at least one valid question"));
         }
 
-        try {
-            Exam created = examCatalog.create(exam);
-            Map<String, Object> resp = new LinkedHashMap<>();
-            resp.put("id", created.getId());
-            resp.put("title", created.getTitle());
-            resp.put("durationMinutes", created.getDuration().toMinutes());
-            resp.put("totalMarks", created.totalMarks());
-            resp.put("questionCount", created.getQuestions().size());
-            return ResponseEntity.status(HttpStatus.CREATED).body(resp);
-        } catch (ExamException ex) {
-            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
-        }
+        Exam created = examCatalog.create(exam);
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("id", created.getId());
+        resp.put("title", created.getTitle());
+        resp.put("durationMinutes", created.getDuration().toMinutes());
+        resp.put("totalMarks", created.totalMarks());
+        resp.put("questionCount", created.getQuestions().size());
+        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
     /**
@@ -291,15 +286,11 @@ public class ExamApiController {
             return ResponseEntity.ok(resp);
         } catch (CompletionException ce) {
             Throwable cause = ce.getCause() != null ? ce.getCause() : ce;
-            if (cause instanceof DuplicateSubmissionException) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "Candidate has already submitted this exam"));
-            } else if (cause instanceof ExamException) {
-                return ResponseEntity.badRequest().body(Map.of("error", cause.getMessage()));
-            } else {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "An error occurred while recording the exam attempt"));
+            if (cause instanceof ExamException examException) {
+                throw examException;
             }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "An error occurred while recording the exam attempt"));
         }
     }
 

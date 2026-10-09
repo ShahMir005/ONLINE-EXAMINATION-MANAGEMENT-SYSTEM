@@ -237,6 +237,27 @@ public class SpaIntegrationTest {
 
     @Test
     @WithMockUser(username = "spastudent@exampro.edu", roles = {"STUDENT"})
+    @DisplayName("Invalid submission answers are handled as JSON by the global exception advice")
+    public void testInvalidSubmissionUsesApiExceptionHandler() throws Exception {
+        String submitJson = """
+            {
+              "answers": {
+                "%d": 0
+              }
+            }
+            """.formatted(Long.MAX_VALUE);
+
+        mockMvc.perform(post("/api/exams/" + testExam.getId() + "/submit")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(submitJson))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.error", containsString("does not belong to exam")));
+    }
+
+    @Test
+    @WithMockUser(username = "spastudent@exampro.edu", roles = {"STUDENT"})
     @DisplayName("Role enforcement: Student cannot access student directory (403)")
     public void testStudentCannotAccessStudentsDirectory() throws Exception {
         mockMvc.perform(get("/api/students"))

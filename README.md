@@ -189,7 +189,7 @@ The timestamp columns use SQL `TIMESTAMP WITH TIME ZONE`. The `attempts` and `ex
 | `attempts` | `Attempt` | `AttemptRepository` (`JdbcAttemptRepository`) |
 | `answers` | Answer map on `Attempt` | `AttemptRepository` (`JdbcAttemptRepository`) |
 | `app_users` | `AppUser` | `AppUserRepository` |
-| `exam_sessions` | No dedicated model class; session fields are read and written by `ExamSessionService` | No dedicated repository; `ExamSessionService` uses JDBC directly |
+| `exam_sessions` | `ExamSession` | `ExamSessionRepository` |
 
 ## Quick Start
 
@@ -205,7 +205,7 @@ cd "/Users/shahmir05/Documents/JAVA PROJECT/ExamPro"
 mvn clean test
 ```
 
-Latest verified result: **80 tests, 0 failures, 0 errors**.
+Latest verified result: **83 tests, 0 failures, 0 errors**.
 
 ### 2. Start the web application
 

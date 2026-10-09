@@ -6,6 +6,7 @@ import edu.exampro.exception.DuplicateSubmissionException;
 import edu.exampro.exception.ValidationException;
 import edu.exampro.model.Attempt;
 import edu.exampro.model.Exam;
+import edu.exampro.model.ExamSession;
 import edu.exampro.model.Instructor;
 import edu.exampro.model.MultipleChoiceQuestion;
 import edu.exampro.model.Question;
@@ -14,12 +15,14 @@ import edu.exampro.model.TrueFalseQuestion;
 import edu.exampro.model.User;
 import edu.exampro.repository.AttemptRepository;
 import edu.exampro.repository.ExamRepository;
+import edu.exampro.repository.ExamSessionRepository;
 import edu.exampro.repository.JdbcAttemptRepository;
 import edu.exampro.repository.StudentRepository;
 import edu.exampro.service.ExamCatalog;
 import edu.exampro.service.ExamSubmissionService;
 import edu.exampro.service.InMemoryCache;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -118,6 +121,35 @@ public class Review1FeaturesTest {
 
         assertTrue(repo.deleteById(saved.getId()));
         assertTrue(repo.findById(saved.getId()).isEmpty());
+    }
+
+    @Test
+    @DisplayName("JDBC CRUD: ExamSessionRepository")
+    public void testExamSessionCrud() {
+        StudentRepository studentRepository = new StudentRepository();
+        ExamCatalog examCatalog = new ExamCatalog(new ExamRepository());
+        ExamSessionRepository sessionRepository = new ExamSessionRepository();
+
+        long suffix = System.currentTimeMillis();
+        Student student = studentRepository.save(
+            new Student(null, "Session Test Student", "session_" + suffix + "@exampro.edu", "STU-" + suffix));
+        Exam exam = new Exam(null, "Session Test Exam " + suffix, Duration.ofMinutes(15));
+        exam.addQuestion(new TrueFalseQuestion(null, "Session CRUD test question.", 1, true));
+        Exam savedExam = examCatalog.create(exam);
+        Instant startTime = Instant.now();
+
+        ExamSession saved = sessionRepository.save(
+            new ExamSession(null, savedExam.getId(), student.getId(), startTime));
+        assertNotNull(saved.getId());
+
+        ExamSession fetched = sessionRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(savedExam.getId(), fetched.getExamId());
+        assertEquals(student.getId(), fetched.getStudentId());
+        assertEquals(startTime, fetched.getStartTime());
+        assertTrue(sessionRepository.findByExamAndStudent(savedExam.getId(), student.getId()).isPresent());
+
+        assertTrue(sessionRepository.deleteById(saved.getId()));
+        assertTrue(sessionRepository.findById(saved.getId()).isEmpty());
     }
 
     @Test

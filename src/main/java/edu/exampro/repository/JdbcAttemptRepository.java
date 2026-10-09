@@ -2,7 +2,6 @@ package edu.exampro.repository;
 
 import edu.exampro.db.Database;
 import edu.exampro.db.Transactions;
-import edu.exampro.exception.DuplicateSubmissionException;
 import edu.exampro.exception.ExamException;
 import edu.exampro.model.Attempt;
 import java.sql.Connection;
@@ -33,16 +32,10 @@ public final class JdbcAttemptRepository implements AttemptRepository {
             + "JOIN attempts t ON t.id = a.attempt_id "
             + "WHERE t.exam_id = ? ORDER BY a.attempt_id, a.question_id";
 
-    /**
-     * Transaction: duplicate check + attempt row + all answer rows are committed together.
-     * Any failure (SQL or runtime) rolls everything back.
-     */
+    /** Saves the attempt row and all answer rows in one transaction. */
     @Override
     public Attempt save(Attempt attempt) {
         long attemptId = Transactions.run("Could not save attempt", connection -> {
-            if (exists(connection, attempt.getExamId(), attempt.getStudentId())) {
-                throw new DuplicateSubmissionException(attempt.getExamId(), attempt.getStudentId());
-            }
             long id = insertAttempt(connection, attempt);
             insertAnswers(connection, id, attempt.getAnswers());
             return id;

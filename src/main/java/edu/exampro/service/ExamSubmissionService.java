@@ -1,6 +1,7 @@
 package edu.exampro.service;
 
 import edu.exampro.exception.DuplicateSubmissionException;
+import edu.exampro.exception.ExamException;
 import edu.exampro.exception.ValidationException;
 import edu.exampro.model.Attempt;
 import edu.exampro.model.Exam;
@@ -23,9 +24,9 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Accepts submissions on a pool of worker threads.
  *
- * <p>Concurrency rule: for ONE (exam, student) pair, the "already submitted?" check and the save
- * happen under the same lock, so two simultaneous submissions can never both succeed. Different
- * students use different locks and run in parallel.
+ * <p>The concurrent collections safely track in-flight submissions and provide one lock per
+ * student and exam. The in-flight set rejects a second request while the first is running; the
+ * lock keeps the stored-submission check and save together so two requests cannot both save.
  */
 public final class ExamSubmissionService implements AutoCloseable {
     private static final int WORKER_THREADS = 4;
@@ -35,14 +36,19 @@ public final class ExamSubmissionService implements AutoCloseable {
 
     private final AttemptRepository attempts;
     private final ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
+    /** Holds student-and-exam keys while their submissions are being processed. */
     private final ConcurrentMap<SubmissionKey, ReentrantLock> locks = new ConcurrentHashMap<>();
+    /** Rejects another request for the same student and exam until the current one finishes. */
     private final Set<String> inFlightSubmissions = ConcurrentHashMap.newKeySet();
 
     public ExamSubmissionService(AttemptRepository attempts) {
         this.attempts = attempts;
     }
 
-    /** Invalid input fails immediately; storage work runs on a worker thread. */
+    /**
+     * Checks input immediately, then uses a {@link CompletableFuture} to run the database work on
+     * a worker thread without making the caller do that work itself.
+     */
     public CompletableFuture<Attempt> submitAsync(Exam exam, Student student, Map<Long, Integer> answers) {
         requireStored(exam, student);
         requireValidAnswers(exam, answers);
@@ -68,13 +74,21 @@ public final class ExamSubmissionService implements AutoCloseable {
         long examId = exam.getId();
         long studentId = student.getId();
         ReentrantLock lock = locks.computeIfAbsent(new SubmissionKey(examId, studentId), key -> new ReentrantLock());
+        // The lock keeps the duplicate check and save together; a second thread must wait here.
         lock.lock();
         try {
             if (attempts.existsByExamAndStudent(examId, studentId)) {
                 throw new DuplicateSubmissionException(examId, studentId);
             }
             Attempt attempt = new Attempt(null, examId, studentId, answers, Instant.now(), exam.score(answers));
-            return attempts.save(attempt);
+            try {
+                return attempts.save(attempt);
+            } catch (ExamException exception) {
+                if (attempts.existsByExamAndStudent(examId, studentId)) {
+                    throw new DuplicateSubmissionException(examId, studentId);
+                }
+                throw exception;
+            }
         } finally {
             lock.unlock();
         }
