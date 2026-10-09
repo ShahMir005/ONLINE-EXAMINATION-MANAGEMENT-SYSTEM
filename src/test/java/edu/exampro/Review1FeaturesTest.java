@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -137,7 +139,7 @@ public class Review1FeaturesTest {
     }
 
     @Test
-    @DisplayName("Multithreading: ExamSubmissionService concurrent submissions and ReentrantLock duplicate rejection")
+    @DisplayName("Multithreading: ExamSubmissionService rejects concurrent duplicate submissions")
     public void testConcurrentSubmissionsAndDuplicateLock() {
         StudentRepository studentRepo = new StudentRepository();
         ExamRepository examRepo = new ExamRepository();
@@ -157,10 +159,14 @@ public class Review1FeaturesTest {
 
             // Fire two simultaneous submissions for the SAME student and exam
             CompletableFuture<Attempt> future1 = submissionService.submitAsync(savedExam, candidate, answers);
-            CompletableFuture<Attempt> future2 = submissionService.submitAsync(savedExam, candidate, answers);
-
             int successCount = 0;
             int duplicateCount = 0;
+            CompletableFuture<Attempt> future2 = null;
+            try {
+                future2 = submissionService.submitAsync(savedExam, candidate, answers);
+            } catch (DuplicateSubmissionException e) {
+                duplicateCount++;
+            }
 
             try {
                 Attempt a1 = future1.join();
@@ -169,16 +175,88 @@ public class Review1FeaturesTest {
                 if (e.getCause() instanceof DuplicateSubmissionException) duplicateCount++;
             }
 
-            try {
-                Attempt a2 = future2.join();
-                if (a2 != null) successCount++;
-            } catch (CompletionException e) {
-                if (e.getCause() instanceof DuplicateSubmissionException) duplicateCount++;
+            if (future2 != null) {
+                try {
+                    Attempt a2 = future2.join();
+                    if (a2 != null) successCount++;
+                } catch (CompletionException e) {
+                    if (e.getCause() instanceof DuplicateSubmissionException) duplicateCount++;
+                }
             }
 
-            // Exactly 1 must succeed and 1 must be rejected by the ReentrantLock
+            // Exactly 1 must succeed and 1 must be rejected as a duplicate.
             assertEquals(1, successCount, "Exactly one submission must succeed");
             assertEquals(1, duplicateCount, "Exactly one submission must be rejected as duplicate");
+        }
+    }
+
+    @Test
+    @DisplayName("Multithreading: Set rejects an in-flight duplicate submission for the same student and exam")
+    public void testInFlightDuplicateSubmissionRejectedBySet() throws Exception {
+        StudentRepository studentRepo = new StudentRepository();
+        ExamRepository examRepo = new ExamRepository();
+        JdbcAttemptRepository jdbcAttempts = new JdbcAttemptRepository();
+        CountDownLatch firstSubmissionChecking = new CountDownLatch(1);
+        CountDownLatch allowFirstSubmission = new CountDownLatch(1);
+        AttemptRepository attemptRepo = new AttemptRepository() {
+            @Override
+            public Attempt save(Attempt attempt) {
+                return jdbcAttempts.save(attempt);
+            }
+
+            @Override
+            public boolean existsByExamAndStudent(long examId, long studentId) {
+                firstSubmissionChecking.countDown();
+                try {
+                    if (!allowFirstSubmission.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Timed out waiting to continue submission");
+                    }
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Interrupted while waiting to continue submission", interrupted);
+                }
+                return jdbcAttempts.existsByExamAndStudent(examId, studentId);
+            }
+
+            @Override
+            public List<Attempt> findByExamId(long examId) {
+                return jdbcAttempts.findByExamId(examId);
+            }
+
+            @Override
+            public Optional<Attempt> findById(long id) {
+                return jdbcAttempts.findById(id);
+            }
+
+            @Override
+            public List<Attempt> findAll() {
+                return jdbcAttempts.findAll();
+            }
+        };
+        ExamCatalog catalog = new ExamCatalog(examRepo);
+
+        String email = "inflight_" + System.currentTimeMillis() + "@exampro.edu";
+        Student candidate = studentRepo.save(
+            new Student(null, "In-flight Candidate", email, "REG-" + System.currentTimeMillis()));
+        Exam exam = new Exam(null, "In-flight Duplicate Test " + System.currentTimeMillis(),
+            Duration.ofMinutes(20));
+        exam.addQuestion(new TrueFalseQuestion(null, "The duplicate guard is thread-safe.", 5, true));
+        Exam savedExam = catalog.create(exam);
+        Map<Long, Integer> answers = Map.of(savedExam.getQuestions().get(0).getId(), 0);
+
+        try (ExamSubmissionService submissionService = new ExamSubmissionService(attemptRepo)) {
+            CompletableFuture<Attempt> firstSubmission =
+                submissionService.submitAsync(savedExam, candidate, answers);
+            try {
+                assertTrue(firstSubmissionChecking.await(5, TimeUnit.SECONDS),
+                    "First submission should reach the repository while remaining in flight");
+                assertThrows(DuplicateSubmissionException.class,
+                    () -> submissionService.submitAsync(savedExam, candidate, answers));
+            } finally {
+                allowFirstSubmission.countDown();
+            }
+
+            assertNotNull(firstSubmission.join().getId());
         }
     }
 }

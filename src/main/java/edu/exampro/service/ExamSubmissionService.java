@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -35,6 +36,7 @@ public final class ExamSubmissionService implements AutoCloseable {
     private final AttemptRepository attempts;
     private final ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
     private final ConcurrentMap<SubmissionKey, ReentrantLock> locks = new ConcurrentHashMap<>();
+    private final Set<String> inFlightSubmissions = ConcurrentHashMap.newKeySet();
 
     public ExamSubmissionService(AttemptRepository attempts) {
         this.attempts = attempts;
@@ -44,7 +46,22 @@ public final class ExamSubmissionService implements AutoCloseable {
     public CompletableFuture<Attempt> submitAsync(Exam exam, Student student, Map<Long, Integer> answers) {
         requireStored(exam, student);
         requireValidAnswers(exam, answers);
-        return CompletableFuture.supplyAsync(() -> submit(exam, student, answers), executor);
+        String submissionKey = student.getId() + ":" + exam.getId();
+        if (!inFlightSubmissions.add(submissionKey)) {
+            throw new DuplicateSubmissionException(exam.getId(), student.getId());
+        }
+        try {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    return submit(exam, student, answers);
+                } finally {
+                    inFlightSubmissions.remove(submissionKey);
+                }
+            }, executor);
+        } catch (RejectedExecutionException exception) {
+            inFlightSubmissions.remove(submissionKey);
+            throw exception;
+        }
     }
 
     private Attempt submit(Exam exam, Student student, Map<Long, Integer> answers) {

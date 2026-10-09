@@ -104,6 +104,93 @@ src/main/resources/
 docs/screenshots/ Curated screenshots used in this README
 ```
 
+## Database model
+
+The schema is initialized by `DatabaseInitializer`. Question choices, submitted answers, and timed exam sessions are stored in their own tables.
+
+```mermaid
+erDiagram
+    students {
+        BIGINT id PK
+        VARCHAR(120) name
+        VARCHAR(160) email UK
+        VARCHAR(60) registration_number UK
+    }
+
+    exams {
+        BIGINT id PK
+        VARCHAR(200) title
+        INT duration_minutes
+    }
+
+    questions {
+        BIGINT id PK
+        BIGINT exam_id FK
+        VARCHAR(10) question_type
+        VARCHAR(1000) prompt
+        INT marks
+        INT correct_option
+    }
+
+    question_options {
+        BIGINT question_id PK, FK
+        INT option_index PK
+        VARCHAR(500) option_text
+    }
+
+    attempts {
+        BIGINT id PK
+        BIGINT exam_id FK
+        BIGINT student_id FK
+        INT score
+        TIMESTAMP submitted_at
+    }
+
+    answers {
+        BIGINT attempt_id PK, FK
+        BIGINT question_id PK, FK
+        INT selected_option
+    }
+
+    app_users {
+        BIGINT id PK
+        VARCHAR(120) full_name
+        VARCHAR(160) email UK
+        VARCHAR(255) password_hash
+        VARCHAR(20) role
+        BOOLEAN enabled
+    }
+
+    exam_sessions {
+        BIGINT id PK
+        BIGINT exam_id FK
+        BIGINT student_id FK
+        TIMESTAMP start_time
+    }
+
+    exams ||--o{ questions : contains
+    questions ||--o{ question_options : offers
+    exams ||--o{ attempts : receives
+    students ||--o{ attempts : submits
+    attempts ||--o{ answers : records
+    questions ||--o{ answers : selected_for
+    exams ||--o{ exam_sessions : starts
+    students ||--o{ exam_sessions : begins
+```
+
+The timestamp columns use SQL `TIMESTAMP WITH TIME ZONE`. The `attempts` and `exam_sessions` tables each enforce uniqueness on `(exam_id, student_id)`.
+
+| Database table | Model class | Repository class |
+|---|---|---|
+| `students` | `Student` | `StudentRepository` |
+| `exams` | `Exam` | `ExamRepository` |
+| `questions` | `Question<?>` (`MultipleChoiceQuestion` / `TrueFalseQuestion`) | `ExamRepository` |
+| `question_options` | Choices on `Question<?>` subclasses | `ExamRepository` |
+| `attempts` | `Attempt` | `AttemptRepository` (`JdbcAttemptRepository`) |
+| `answers` | Answer map on `Attempt` | `AttemptRepository` (`JdbcAttemptRepository`) |
+| `app_users` | `AppUser` | `AppUserRepository` |
+| `exam_sessions` | No dedicated model class; session fields are read and written by `ExamSessionService` | No dedicated repository; `ExamSessionService` uses JDBC directly |
+
 ## Quick Start
 
 ### Requirements
@@ -118,7 +205,7 @@ cd "/Users/shahmir05/Documents/JAVA PROJECT/ExamPro"
 mvn clean test
 ```
 
-Latest verified result: **76 tests, 0 failures, 0 errors**.
+Latest verified result: **80 tests, 0 failures, 0 errors**.
 
 ### 2. Start the web application
 

@@ -1,6 +1,7 @@
 package edu.exampro.app;
 
 import edu.exampro.db.DatabaseInitializer;
+import edu.exampro.exception.DuplicateSubmissionException;
 import edu.exampro.exception.ExamException;
 import edu.exampro.model.Attempt;
 import edu.exampro.model.Exam;
@@ -205,7 +206,12 @@ public class ExamProApplication {
             CompletableFuture<Attempt> alanFuture = submissions.submitAsync(exam, alan, answers(exam, 0, 1, 0));
             // Grace submits the SAME exam twice at the same moment: exactly one may succeed.
             CompletableFuture<Attempt> graceFirst = submissions.submitAsync(exam, grace, graceAnswers);
-            CompletableFuture<Attempt> graceSecond = submissions.submitAsync(exam, grace, graceAnswers);
+            CompletableFuture<Attempt> graceSecond;
+            try {
+                graceSecond = submissions.submitAsync(exam, grace, graceAnswers);
+            } catch (DuplicateSubmissionException exception) {
+                graceSecond = CompletableFuture.failedFuture(exception);
+            }
 
             report("Ada Lovelace", adaFuture, exam);
             report("Alan Turing", alanFuture, exam);
