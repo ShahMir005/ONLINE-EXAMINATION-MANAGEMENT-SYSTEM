@@ -1,0 +1,225 @@
+/* ==========================================================================
+   ExamPro — Base
+   Modern reset, typography scale, accessibility, reduced-motion.
+   Imported after tokens.css, before everything else.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Box-sizing & document reset
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove list styles from semantic lists used for nav */
+ul[role="list"],
+ol[role="list"] {
+  list-style: none;
+}
+
+/* --------------------------------------------------------------------------
+   Document
+   -------------------------------------------------------------------------- */
+html {
+  font-size: 16px;
+  line-height: 1.65;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  background-color: var(--bg-canvas);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  background-color: var(--bg-canvas);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------------------
+   Typography scale
+   -------------------------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); }
+h2 { font-size: clamp(1.45rem, 3vw, 1.9rem); }
+h3 { font-size: clamp(1.15rem, 2.5vw, 1.4rem); }
+h4 { font-size: 1.1rem; }
+h5 { font-size: 0.95rem; }
+h6 { font-size: 0.85rem; }
+
+p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 72ch;
+}
+
+/* --------------------------------------------------------------------------
+   Links
+   -------------------------------------------------------------------------- */
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-medium);
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+}
+
+/* --------------------------------------------------------------------------
+   Embedded media
+   -------------------------------------------------------------------------- */
+img, svg, video, canvas, audio, iframe, embed, object {
+  display: block;
+  max-width: 100%;
+}
+
+img, video {
+  height: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Form elements — inherit fonts by default
+   -------------------------------------------------------------------------- */
+input, button, textarea, select, optgroup {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Code & monospace
+   -------------------------------------------------------------------------- */
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
+code {
+  background: var(--bg-subtle);
+  padding: 0.15em 0.35em;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.82em;
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Tables — base semantics (display styles live in components.css)
+   -------------------------------------------------------------------------- */
+table {
+  border-collapse: collapse;
+}
+
+/* --------------------------------------------------------------------------
+   hr
+   -------------------------------------------------------------------------- */
+hr {
+  height: 1px;
+  background: var(--border-subtle);
+  border: none;
+  margin: 2rem 0;
+}
+
+/* --------------------------------------------------------------------------
+   Selection
+   -------------------------------------------------------------------------- */
+::selection {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbar (Webkit) — thin, unobtrusive
+   -------------------------------------------------------------------------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* --------------------------------------------------------------------------
+   Utility helpers
+   -------------------------------------------------------------------------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-wrap { white-space: nowrap; }
+
+/* --------------------------------------------------------------------------
+   Light-mode forced (system default is already light — this makes it explicit)
+   -------------------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  /* Intentionally left empty: ExamPro uses a light-only palette.
+     A future dark-mode pass would override custom properties here. */
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — global kill-switch for animations
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

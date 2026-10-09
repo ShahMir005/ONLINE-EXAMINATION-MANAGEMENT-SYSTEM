@@ -1,0 +1,367 @@
+/* ==========================================================================
+   ExamPro — Login Page
+   Centered brand panel and a focused sign-in card. Only loaded on /login.
+   ========================================================================== */
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+.login-body {
+  background: var(--bg-canvas);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.login-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100vh;
+}
+
+/* ── Left: branding aside ───────────────────────────────────────────────── */
+.login-aside {
+  background: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 2rem;
+  overflow: hidden;
+}
+
+.login-aside-inner {
+  max-width: 320px;
+  text-align: center;
+}
+
+.login-wordmark {
+  font-family: var(--font-serif);
+  font-size: clamp(3rem, 5vw, 4.75rem);
+  font-weight: 700;
+  color: var(--bg-canvas);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0 0 1rem;
+}
+
+.login-aside-tag {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Right: form panel ──────────────────────────────────────────────────── */
+.login-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;                   /* tighter than 1.75rem */
+}
+
+/* ── Card header ────────────────────────────────────────────────────────── */
+.login-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.login-card-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Role segmented control ─────────────────────────────────────────────── */
+.role-segmented {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+
+.role-seg-btn {
+  flex: 1;
+  padding: 0.5rem 0;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
+  font-weight: 600;
+  border: none;
+  border-right: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  line-height: 1.2;
+  min-height: 36px;
+}
+
+.role-seg-btn:last-child {
+  border-right: none;
+}
+
+.role-seg-btn:hover:not([aria-pressed="true"]) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.role-seg-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--text-white);
+  border-right-color: var(--accent-hover);
+}
+
+/* When the active button is in the middle, prevent the right neighbour
+   from double-bordering with accent */
+.role-seg-btn[aria-pressed="true"] + .role-seg-btn {
+  border-left: 1px solid var(--accent-hover);
+}
+
+.role-seg-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+  position: relative;
+}
+
+/* ── Form ───────────────────────────────────────────────────────────────── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.form-group + .form-group {
+  margin-top: 1rem;
+}
+
+/* ── Password input with toggle ─────────────────────────────────────────── */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap .form-control {
+  padding-right: 2.75rem;         /* room for the eye button */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast);
+  line-height: 0;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.eye-icon {
+  display: block;
+}
+
+/* ── Forgot / sub-actions row ───────────────────────────────────────────── */
+.login-sub-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: var(--font-sans);
+}
+
+.link-btn:hover {
+  color: var(--accent-hover);
+}
+
+/* ── Submit button ──────────────────────────────────────────────────────── */
+.login-submit-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* ── Local demo access ─────────────────────────────────────────────────── */
+.demo-access {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+}
+
+.demo-access-title {
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.demo-access-note {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  margin: 0.3rem 0 0.75rem;
+}
+
+.demo-access-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.demo-account {
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  font-family: var(--font-sans);
+  gap: 0.75rem;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  width: 100%;
+  cursor: pointer;
+}
+
+.demo-account:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.demo-account:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.demo-account-role {
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.demo-account-detail {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.login-card-footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0.25rem;
+}
+
+.login-footer-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Responsive: compact centred brand above the form ───────────────────── */
+@media (max-width: 900px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .login-aside {
+    min-height: 176px;
+    padding: 2rem 1.5rem;
+  }
+
+  .login-main {
+    min-height: auto;
+    padding: 2.5rem 1.5rem 3rem;
+  }
+
+  .login-wordmark {
+    font-size: clamp(3rem, 10vw, 4.25rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-aside {
+    min-height: 144px;
+    padding: 1.5rem 1rem;
+  }
+
+  .login-wordmark {
+    font-size: 3rem;
+  }
+
+  .login-aside-tag {
+    font-size: 0.62rem;
+    letter-spacing: 0.11em;
+  }
+
+  .login-main {
+    padding: 1.75rem 1rem 2.5rem;
+  }
+
+  .login-card {
+    max-width: 100%;
+  }
+
+  .demo-account {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .demo-account-detail {
+    text-align: left;
+  }
+}

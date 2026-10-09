@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Something went wrong — ExamPro</title>
+  <meta name="description" content="An unexpected error occurred. Please try again or contact support." />
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-container">
+      <a href="/app" class="brand-link" aria-label="ExamPro home">
+        <span class="brand-icon" aria-hidden="true">EP</span>
+        ExamPro
+      </a>
+    </div>
+  </nav>
+
+  <main class="container" role="main">
+    <div class="hero-banner">
+      <p class="hero-tag">System Notice</p>
+      <h1 class="page-title">Something went wrong.</h1>
+      <p class="hero-description" id="error-message">
+        An unexpected error occurred. Please go back and try again,
+        or contact your administrator if the problem continues.
+      </p>
+      <div class="hero-actions">
+        <a href="/app" class="btn btn-primary">Go to dashboard</a>
+        <a href="/login" class="btn btn-secondary">Sign in again</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/error.js"></script>
+</body>
+</html>

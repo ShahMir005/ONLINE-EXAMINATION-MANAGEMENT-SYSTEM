@@ -1,9 +1,11 @@
 package edu.exampro;
 
 import edu.exampro.app.ExamProApplication;
+import edu.exampro.model.AppUser;
 import edu.exampro.model.Attempt;
 import edu.exampro.model.Exam;
 import edu.exampro.model.Student;
+import edu.exampro.repository.AppUserRepository;
 import edu.exampro.repository.AttemptRepository;
 import edu.exampro.repository.StudentRepository;
 import edu.exampro.service.ExamCatalog;
@@ -15,20 +17,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import edu.exampro.model.AppUser;
-import edu.exampro.repository.AppUserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = ExamProApplication.class)
 @AutoConfigureMockMvc
@@ -53,147 +52,106 @@ public class SecurityIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    @DisplayName("1. Unauthenticated users are redirected to login")
-    public void testUnauthenticatedRedirect() throws Exception {
-        // Admin route redirects to /admin/login
-        mockMvc.perform(get("/admin/dashboard"))
+    @DisplayName("1. Unauthenticated users are redirected to /login for app shell and receive 401 for /api")
+    public void testUnauthenticatedAccess() throws Exception {
+        // Protected app route redirects to /login
+        mockMvc.perform(get("/app"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/admin/login")));
+            .andExpect(header().string("Location", containsString("/login")));
 
-        // Teacher route redirects to /teacher/login
-        mockMvc.perform(get("/teacher/dashboard"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/teacher/login")));
-
-        // Student route redirects to /student/login
-        mockMvc.perform(get("/student/dashboard"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/student/login")));
-
-        // General protected route redirects to login
-        mockMvc.perform(get("/students"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/student/login")));
+        // Protected API route returns 401 JSON
+        mockMvc.perform(get("/api/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.error", containsString("Authentication required")));
     }
 
     @Test
-    @DisplayName("2. Admin can access admin dashboard")
+    @DisplayName("2. Admin can access admin endpoints and views")
     @WithMockUser(username = "admin@exampro.edu", roles = {"ADMIN"})
-    public void testAdminAccessAdminDashboard() throws Exception {
-        mockMvc.perform(get("/admin/dashboard"))
+    public void testAdminAccessEndpoints() throws Exception {
+        mockMvc.perform(get("/app"))
             .andExpect(status().isOk())
-            .andExpect(view().name("admin-dashboard"))
-            .andExpect(content().string(containsString("Admin Dashboard")));
+            .andExpect(view().name("app"));
+
+        mockMvc.perform(get("/api/users"))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    @DisplayName("3. Teacher cannot access admin routes")
+    @DisplayName("3. Teacher cannot access admin-only endpoints")
     @WithMockUser(username = "teacher@exampro.edu", roles = {"TEACHER"})
-    public void testTeacherCannotAccessAdminRoutes() throws Exception {
-        mockMvc.perform(get("/admin/dashboard"))
-            .andExpect(status().isForbidden());
+    public void testTeacherCannotAccessAdminEndpoints() throws Exception {
+        mockMvc.perform(get("/api/users"))
+            .andExpect(status().isForbidden())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 
-        mockMvc.perform(get("/students"))
-            .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/students"))
+            .andExpect(status().isForbidden())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    @DisplayName("4. Student cannot access admin or teacher routes")
+    @DisplayName("4. Student cannot access admin or teacher endpoints")
     @WithMockUser(username = "ada@exampro.edu", roles = {"STUDENT"})
-    public void testStudentCannotAccessAdminOrTeacherRoutes() throws Exception {
-        // Student cannot access admin dashboard
-        mockMvc.perform(get("/admin/dashboard"))
+    public void testStudentCannotAccessAdminOrTeacherEndpoints() throws Exception {
+        mockMvc.perform(get("/api/users"))
             .andExpect(status().isForbidden());
 
-        // Student cannot access student management
-        mockMvc.perform(get("/students"))
+        mockMvc.perform(get("/api/students"))
             .andExpect(status().isForbidden());
 
-        // Student cannot access teacher dashboard
-        mockMvc.perform(get("/teacher/dashboard"))
-            .andExpect(status().isForbidden());
-
-        // Student cannot access exam creation
-        mockMvc.perform(get("/exams/new"))
+        mockMvc.perform(post("/api/exams")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Hacked Exam\",\"durationMinutes\":10,\"questions\":[]}"))
             .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("5. A student cannot view another student's scorecard")
+    @DisplayName("5. A student cannot view another student's attempt or scorecard")
     public void testStudentCannotViewOtherStudentScorecard() throws Exception {
-        // Find Ada and Alan from repository
         Student ada = studentRepository.findByEmail("ada@exampro.edu")
             .orElseGet(() -> studentRepository.save(new Student(null, "Ada Lovelace", "ada@exampro.edu", "STU-101")));
         Student alan = studentRepository.findByEmail("alan@exampro.edu")
             .orElseGet(() -> studentRepository.save(new Student(null, "Alan Turing", "alan@exampro.edu", "STU-102")));
 
-        // Create a unique exam with at least one question specifically for this attempt test
         Exam exam = new Exam(null, "Scorecard Security Test " + System.currentTimeMillis(), Duration.ofMinutes(15));
         exam.addQuestion(new edu.exampro.model.TrueFalseQuestion(null, "Security question", 10, true));
         Exam savedExam = examCatalog.create(exam);
 
-        // Create an attempt explicitly belonging to Ada
         Attempt adaAttempt = new Attempt(null, savedExam.getId(), ada.getId(), Map.of(), Instant.now(), 10);
         Attempt savedAttempt = attemptRepository.save(adaAttempt);
 
-        // Alan (logged in as STUDENT) tries to view Ada's attempt -> Expect 403 Forbidden
-        mockMvc.perform(get("/attempts/" + savedAttempt.getId())
+        // Alan (STUDENT) tries to view Ada's attempt -> Expect 403 Forbidden
+        mockMvc.perform(get("/api/attempts/" + savedAttempt.getId())
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("alan@exampro.edu").roles("STUDENT")))
             .andExpect(status().isForbidden());
 
-        // Ada (logged in as herself) views her attempt -> Expect 200 OK
-        mockMvc.perform(get("/attempts/" + savedAttempt.getId())
+        // Ada (STUDENT) views her own attempt -> Expect 200 OK
+        mockMvc.perform(get("/api/attempts/" + savedAttempt.getId())
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
-            .andExpect(status().isOk())
-            .andExpect(view().name("scorecard"));
+            .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Portal Role Enforcement: Login rejected when role does not match login portal")
-    public void testPortalRoleMismatchRejection() throws Exception {
-        // Teacher tries to login via Admin portal -> rejected with role_mismatch error
-        mockMvc.perform(post("/admin/login")
-                .with(csrf())
-                .param("username", "teacher@exampro.edu")
-                .param("password", "TeacherPassword123!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/admin/login?error=role_mismatch")));
+    @DisplayName("6. Form login authenticates valid credentials and redirects to /app")
+    public void testFormLoginSuccess() throws Exception {
+        String testUserEmail = "login_test_" + System.currentTimeMillis() + "@exampro.edu";
+        appUserRepository.save(new AppUser(
+            null, "Login User", testUserEmail, passwordEncoder.encode("SecretPass123!"), "STUDENT", true));
 
-        // Student tries to login via Admin portal -> rejected with role_mismatch error
-        mockMvc.perform(post("/admin/login")
+        mockMvc.perform(post("/spa-login")
                 .with(csrf())
-                .param("username", "ada@exampro.edu")
-                .param("password", "StudentPassword123!"))
+                .param("username", testUserEmail)
+                .param("password", "SecretPass123!"))
             .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/admin/login?error=role_mismatch")));
-
-        // Admin logs in through Admin portal -> successfully redirected to /admin/dashboard
-        mockMvc.perform(post("/admin/login")
-                .with(csrf())
-                .param("username", "admin@exampro.edu")
-                .param("password", "AdminPassword123!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/admin/dashboard")));
-
-        // Teacher logs in through Teacher portal -> successfully redirected to /teacher/dashboard
-        mockMvc.perform(post("/teacher/login")
-                .with(csrf())
-                .param("username", "teacher@exampro.edu")
-                .param("password", "TeacherPassword123!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/teacher/dashboard")));
-
-        // Student logs in through Student portal -> successfully redirected to /student/dashboard
-        mockMvc.perform(post("/student/login")
-                .with(csrf())
-                .param("username", "ada@exampro.edu")
-                .param("password", "StudentPassword123!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/student/dashboard")));
+            .andExpect(header().string("Location", containsString("/app")));
     }
 
     @Test
-    @DisplayName("Prevent student from submitting exam as another student by tampering with request params")
+    @DisplayName("7. Prevent student from submitting exam as another student by tampering with request params")
     public void testStudentCannotSubmitAsAnotherStudent() throws Exception {
         Student ada = studentRepository.findByEmail("ada@exampro.edu")
             .orElseGet(() -> studentRepository.save(new Student(null, "Ada Lovelace", "ada@exampro.edu", "STU-101")));
@@ -205,65 +163,59 @@ public class SecurityIntegrationTest {
             return examCatalog.create(e);
         });
 
-        // Ada is logged in, but studentId parameter in request is set to Alan's ID
-        mockMvc.perform(post("/exams/" + exam.getId() + "/submit")
+        // Ada is logged in, but studentId in JSON payload is Alan's ID
+        String payload = "{\"studentId\":" + alan.getId() + ",\"answers\":{}}";
+
+        mockMvc.perform(post("/api/exams/" + exam.getId() + "/submit")
                 .with(csrf())
-                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT"))
-                .param("studentId", String.valueOf(alan.getId())))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
             .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("Admin User Management: RBAC Access Control restricts /admin/users strictly to ADMIN")
+    @DisplayName("8. Admin User Management: RBAC Access Control restricts /api/users strictly to ADMIN")
     public void testAdminUserManagementAccessControl() throws Exception {
-        // Unauthenticated -> redirected to /admin/login
-        mockMvc.perform(get("/admin/users"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(header().string("Location", containsString("/admin/login")));
+        mockMvc.perform(get("/api/users"))
+            .andExpect(status().isUnauthorized());
 
-        // TEACHER -> 403 Forbidden
-        mockMvc.perform(get("/admin/users")
+        mockMvc.perform(get("/api/users")
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("teacher@exampro.edu").roles("TEACHER")))
             .andExpect(status().isForbidden());
 
-        // STUDENT -> 403 Forbidden
-        mockMvc.perform(get("/admin/users")
+        mockMvc.perform(get("/api/users")
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
             .andExpect(status().isForbidden());
 
-        // ADMIN -> 200 OK
-        mockMvc.perform(get("/admin/users")
+        mockMvc.perform(get("/api/users")
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin@exampro.edu").roles("ADMIN")))
             .andExpect(status().isOk())
-            .andExpect(view().name("admin-users"))
-            .andExpect(content().string(containsString("User Account Management")));
+            .andExpect(jsonPath("$", not(empty())));
     }
 
     @Test
-    @DisplayName("Admin User Management: Create user with BCrypt hashing and no plaintext password storage")
+    @DisplayName("9. Admin User Management: Create user with BCrypt hashing and no plaintext password storage")
     @WithMockUser(username = "admin@exampro.edu", roles = {"ADMIN"})
     public void testAdminCreateUserWithBcryptAndNoPlaintext() throws Exception {
         String uniqueEmail = "teacher_babbage_" + System.currentTimeMillis() + "@exampro.edu";
         String rawPassword = "BabbageSecret123!";
 
-        mockMvc.perform(post("/admin/users")
-                .with(csrf())
-                .param("fullName", "Charles Babbage")
-                .param("email", uniqueEmail)
-                .param("role", "TEACHER")
-                .param("password", rawPassword))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/admin/users"))
-            .andExpect(flash().attributeExists("successMessage"));
+        String payload = "{\"fullName\":\"Charles Babbage\",\"email\":\"" + uniqueEmail + "\",\"role\":\"TEACHER\",\"password\":\"" + rawPassword + "\"}";
 
-        // Fetch user from DB and verify BCrypt hash properties
+        mockMvc.perform(post("/api/users")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email", is(uniqueEmail)));
+
         AppUser savedUser = appUserRepository.findByEmail(uniqueEmail).orElse(null);
         assertNotNull(savedUser, "User must be found in database");
         assertEquals("Charles Babbage", savedUser.getFullName());
         assertEquals("TEACHER", savedUser.getRole());
         assertTrue(savedUser.isEnabled());
 
-        // Critical security check: Raw plaintext password MUST NOT be stored
         assertNotEquals(rawPassword, savedUser.getPasswordHash(), "Plaintext password must never be stored");
         assertTrue(savedUser.getPasswordHash().startsWith("$2a$") || savedUser.getPasswordHash().startsWith("$2b$"),
             "Password hash must be a valid BCrypt hash format");
@@ -272,23 +224,21 @@ public class SecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("Admin User Management: Duplicate email validation rejects duplicate account creation")
+    @DisplayName("10. Admin User Management: Duplicate email validation rejects duplicate account creation")
     @WithMockUser(username = "admin@exampro.edu", roles = {"ADMIN"})
     public void testAdminCreateUserDuplicateEmailValidation() throws Exception {
-        // Attempt to create user with already registered admin email
-        mockMvc.perform(post("/admin/users")
+        String payload = "{\"fullName\":\"Imposter Admin\",\"email\":\"admin@exampro.edu\",\"role\":\"ADMIN\",\"password\":\"SomePass123!\"}";
+
+        mockMvc.perform(post("/api/users")
                 .with(csrf())
-                .param("fullName", "Imposter Admin")
-                .param("email", "admin@exampro.edu")
-                .param("role", "ADMIN")
-                .param("password", "SomePass123!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/admin/users"))
-            .andExpect(flash().attribute("errorMessage", containsString("already exists")));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", containsString("already exists")));
     }
 
     @Test
-    @DisplayName("Admin User Management: Secure change-password form updates BCrypt hash and verifies match")
+    @DisplayName("11. Admin User Management: Secure change-password updates BCrypt hash and verifies match")
     @WithMockUser(username = "admin@exampro.edu", roles = {"ADMIN"})
     public void testAdminChangeUserPasswordSecurely() throws Exception {
         String testEmail = "pwd_test_" + System.currentTimeMillis() + "@exampro.edu";
@@ -299,28 +249,78 @@ public class SecurityIntegrationTest {
         String newPassword = "NewSecretPassword789!";
 
         // 1. Password mismatch rejection
-        mockMvc.perform(post("/admin/users/" + testUser.getId() + "/change-password")
+        String mismatchPayload = "{\"newPassword\":\"" + newPassword + "\",\"confirmPassword\":\"MismatchPassword456!\"}";
+        mockMvc.perform(post("/api/users/" + testUser.getId() + "/change-password")
                 .with(csrf())
-                .param("newPassword", newPassword)
-                .param("confirmPassword", "MismatchPassword456!"))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/admin/users"))
-            .andExpect(flash().attribute("errorMessage", containsString("do not match")));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mismatchPayload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error", containsString("do not match")));
 
-        // 2. Successful password change with matching confirm password
-        mockMvc.perform(post("/admin/users/" + testUser.getId() + "/change-password")
+        // 2. Successful password change
+        String matchingPayload = "{\"newPassword\":\"" + newPassword + "\",\"confirmPassword\":\"" + newPassword + "\"}";
+        mockMvc.perform(post("/api/users/" + testUser.getId() + "/change-password")
                 .with(csrf())
-                .param("newPassword", newPassword)
-                .param("confirmPassword", newPassword))
-            .andExpect(status().is3xxRedirection())
-            .andExpect(redirectedUrl("/admin/users"))
-            .andExpect(flash().attributeExists("successMessage"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(matchingPayload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok", is(true)));
 
-        // Verify updated hash in database
         AppUser updatedUser = appUserRepository.findById(testUser.getId()).orElseThrow();
-        assertNotEquals(newPassword, updatedUser.getPasswordHash(), "Plaintext password must not be stored");
-        assertFalse(passwordEncoder.matches(originalPassword, updatedUser.getPasswordHash()), "Old password must no longer match");
-        assertTrue(passwordEncoder.matches(newPassword, updatedUser.getPasswordHash()), "New password must match BCrypt hash");
+        assertNotEquals(newPassword, updatedUser.getPasswordHash());
+        assertFalse(passwordEncoder.matches(originalPassword, updatedUser.getPasswordHash()));
+        assertTrue(passwordEncoder.matches(newPassword, updatedUser.getPasswordHash()));
+    }
+
+    @Test
+    @DisplayName("12. HARD RULE: Automated verification that NO correct answers leak in any student responses")
+    public void testNeverSendCorrectAnswersToStudentAcrossAllResponses() throws Exception {
+        Exam testExam = new Exam(null, "Answer Leak Prevention Exam " + System.currentTimeMillis(), Duration.ofMinutes(25));
+        testExam.addQuestion(new edu.exampro.model.MultipleChoiceQuestion(
+            null, "What is encapsulation in OOP?", 4,
+            java.util.List.of("Data hiding", "Inheritance", "Polymorphism", "Compilation"), 0));
+        testExam.addQuestion(new edu.exampro.model.TrueFalseQuestion(
+            null, "Interfaces can contain default methods in Java 8+.", 2, true));
+        Exam savedExam = examCatalog.create(testExam);
+
+        Student student = studentRepository.findByEmail("ada@exampro.edu")
+            .orElseGet(() -> studentRepository.save(new Student(null, "Ada Lovelace", "ada@exampro.edu", "STU-101")));
+
+        // 1. GET /api/exams
+        String examsJson = mockMvc.perform(get("/api/exams")
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        assertFalse(examsJson.contains("correctOptionIndex"), "Exams list must never include correctOptionIndex");
+        assertFalse(examsJson.contains("correctOption"), "Exams list must never include correctOption");
+        assertFalse(examsJson.contains("tfCorrect"), "Exams list must never include tfCorrect");
+
+        // 2. GET /api/exams/{id} for STUDENT
+        String examDetailJson = mockMvc.perform(get("/api/exams/" + savedExam.getId())
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        assertFalse(examDetailJson.contains("correctOptionIndex"), "Student exam detail must never reveal correctOptionIndex");
+        assertFalse(examDetailJson.contains("correctOption"), "Student exam detail must never reveal correctOption");
+        assertFalse(examDetailJson.contains("tfCorrect"), "Student exam detail must never reveal tfCorrect");
+        assertFalse(examDetailJson.contains("correctText"), "Student exam detail must never reveal correctText");
+
+        // 3. POST /api/exams/{id}/start for STUDENT
+        String startJson = mockMvc.perform(post("/api/exams/" + savedExam.getId() + "/start")
+                .with(csrf())
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("ada@exampro.edu").roles("STUDENT")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        assertFalse(startJson.contains("correctOptionIndex"), "Start exam session must never reveal correctOptionIndex");
+        assertFalse(startJson.contains("correctOption"), "Start exam session must never reveal correctOption");
+        assertFalse(startJson.contains("tfCorrect"), "Start exam session must never reveal tfCorrect");
+        assertFalse(startJson.contains("correctText"), "Start exam session must never reveal correctText");
+
+        // 4. Verify that ADMIN can see answer keys (confirms answer keys exist, but are strictly hidden from students)
+        String adminDetailJson = mockMvc.perform(get("/api/exams/" + savedExam.getId())
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin@exampro.edu").roles("ADMIN")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        assertTrue(adminDetailJson.contains("correctOptionIndex"), "Admin exam detail must include correctOptionIndex");
     }
 }
-

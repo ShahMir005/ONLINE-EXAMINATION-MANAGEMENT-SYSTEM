@@ -66,6 +66,18 @@
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <environmentVariables>
+            <ADMIN_PASSWORD>AdminPassword123!</ADMIN_PASSWORD>
+          </environmentVariables>
+          <systemPropertyVariables>
+            <exampro.database.url>jdbc:h2:mem:exampro_test;DB_CLOSE_DELAY=-1</exampro.database.url>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>

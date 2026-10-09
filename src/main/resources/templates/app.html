@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExamPro</title>
+  <meta name="description" content="ExamPro online examination system." />
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="navbar" id="main-nav" role="navigation" aria-label="Main navigation">
+    <div class="navbar-container">
+      <a href="/app#/" class="brand-link" id="nav-brand" aria-label="ExamPro home">
+        <span class="brand-icon" aria-hidden="true">EP</span>
+        ExamPro
+      </a>
+      <ul class="nav-links" id="nav-links" role="list" aria-label="Application links"></ul>
+      <div class="nav-cta" id="nav-cta"></div>
+    </div>
+  </nav>
+
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <main id="view" class="container" role="main" aria-live="polite">
+    <div id="initial-skeleton">
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-text"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-bottom">
+        <span class="footer-copyright">&copy; <span id="footer-year-span"></span> ExamPro. All rights reserved.</span>
+        <ul class="footer-legal">
+          <li><a href="#/">Dashboard</a></li>
+        </ul>
+      </div>
+    </div>
+    <span class="footer-wordmark" aria-hidden="true">ExamPro</span>
+  </footer>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

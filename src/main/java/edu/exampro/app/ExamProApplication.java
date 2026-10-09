@@ -10,6 +10,7 @@ import edu.exampro.model.Question;
 import edu.exampro.model.Student;
 import edu.exampro.model.TrueFalseQuestion;
 import edu.exampro.model.User;
+import edu.exampro.repository.AppUserRepository;
 import edu.exampro.repository.AttemptRepository;
 import edu.exampro.repository.ExamRepository;
 import edu.exampro.repository.JdbcAttemptRepository;
@@ -38,16 +39,44 @@ public class ExamProApplication {
     public ExamProApplication() { }
 
     public static void main(String[] args) {
-        if (args.length > 0 && "--console".equalsIgnoreCase(args[0])) {
-            try {
-                run();
-            } catch (ExamException exception) {
-                System.err.println("ExamPro stopped: " + exception.getMessage());
-                if (exception.getCause() != null) {
-                    System.err.println("Cause: " + exception.getCause().getMessage());
+        if (args.length > 0) {
+            if ("--console".equalsIgnoreCase(args[0])) {
+                try {
+                    run();
+                } catch (ExamException exception) {
+                    System.err.println("ExamPro stopped: " + exception.getMessage());
+                    if (exception.getCause() != null) {
+                        System.err.println("Cause: " + exception.getCause().getMessage());
+                    }
                 }
+                return;
             }
-            return;
+
+            if ("--seed".equalsIgnoreCase(args[0])) {
+                DatabaseInitializer.initialize();
+                AppUserRepository userRepo = new AppUserRepository();
+                StudentRepository studentRepo = new StudentRepository();
+                org.springframework.security.crypto.password.PasswordEncoder encoder =
+                    new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+                edu.exampro.service.DevSeedService.seedDevAccounts(userRepo, studentRepo, encoder);
+                return;
+            }
+
+            if ("--reset-password".equalsIgnoreCase(args[0])) {
+                if (args.length < 3) {
+                    System.err.println("Usage: --reset-password <email> <newPassword>");
+                    System.exit(1);
+                }
+                DatabaseInitializer.initialize();
+                AppUserRepository userRepo = new AppUserRepository();
+                org.springframework.security.crypto.password.PasswordEncoder encoder =
+                    new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+                boolean ok = edu.exampro.service.DevSeedService.resetUserPassword(args[1], args[2], userRepo, encoder);
+                if (!ok) {
+                    System.exit(1);
+                }
+                return;
+            }
         }
 
         DatabaseInitializer.initialize();

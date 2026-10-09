@@ -3,7 +3,6 @@ package edu.exampro.config;
 import edu.exampro.app.ExamProApplication;
 import edu.exampro.db.DatabaseInitializer;
 import edu.exampro.model.AppUser;
-import edu.exampro.model.Student;
 import edu.exampro.repository.AppUserRepository;
 import edu.exampro.repository.AttemptRepository;
 import edu.exampro.repository.ExamRepository;
@@ -68,39 +67,53 @@ public class ExamProConfig {
                 log.info("Initial Review 1 demo data initialized successfully!");
             }
 
-            // Seed user accounts for authentication if empty
-            if (appUserRepository.findAll().isEmpty()) {
-                log.info("Seeding role-based authentication user accounts with BCrypt hashes...");
-                
-                // 1. Admin
-                appUserRepository.save(new AppUser(
-                    null, "System Administrator", "admin@exampro.edu",
-                    passwordEncoder.encode("AdminPassword123!"), "ADMIN", true));
-
-                // 2. Teacher
-                appUserRepository.save(new AppUser(
-                    null, "Professor Charles Babbage", "teacher@exampro.edu",
-                    passwordEncoder.encode("TeacherPassword123!"), "TEACHER", true));
-
-                // 3. Students
-                appUserRepository.save(new AppUser(
-                    null, "Ada Lovelace", "ada@exampro.edu",
-                    passwordEncoder.encode("StudentPassword123!"), "STUDENT", true));
-
-                appUserRepository.save(new AppUser(
-                    null, "Alan Turing", "alan@exampro.edu",
-                    passwordEncoder.encode("StudentPassword123!"), "STUDENT", true));
-
-                log.info("Seeded 4 authentication accounts: admin, teacher, ada, alan.");
+            // In development mode, seed default dev accounts (admin, teacher, student)
+            if (edu.exampro.service.DevSeedService.isDevelopment()) {
+                edu.exampro.service.DevSeedService.seedDevAccounts(appUserRepository, studentRepository, passwordEncoder);
             }
 
-            // Ensure students corresponding to ada and alan exist in students table
-            if (studentRepository.findByEmail("ada@exampro.edu").isEmpty()) {
-                studentRepository.save(new Student(null, "Ada Lovelace", "ada@exampro.edu", "STU-101"));
-            }
-            if (studentRepository.findByEmail("alan@exampro.edu").isEmpty()) {
-                studentRepository.save(new Student(null, "Alan Turing", "alan@exampro.edu", "STU-102"));
+            // Seed the initial administrator, or perform an explicitly requested local recovery.
+            var existingAdmin = appUserRepository.findByEmail("admin@exampro.edu");
+            boolean resetAdminPassword = Boolean.parseBoolean(
+                System.getenv("EXAMPRO_RESET_ADMIN_PASSWORD"));
+            if (existingAdmin.isEmpty()) {
+                String adminPassword = System.getenv("ADMIN_PASSWORD");
+                if (adminPassword == null || adminPassword.isBlank()) {
+                    adminPassword = System.getenv("EXAMPRO_ADMIN_PASSWORD");
+                }
+                if (adminPassword != null && !adminPassword.isBlank()) {
+                    log.info("Seeding initial administrator account with password from environment variable...");
+                    appUserRepository.save(new AppUser(
+                        null, "System Administrator", "admin@exampro.edu",
+                        passwordEncoder.encode(adminPassword.trim()), "ADMIN", true));
+                } else if (!edu.exampro.service.DevSeedService.isDevelopment()) {
+                    throw new IllegalStateException(
+                        "Administrator setup requires ADMIN_PASSWORD (or EXAMPRO_ADMIN_PASSWORD). "
+                            + "Set it before starting ExamPro.");
+                }
+            } else if (resetAdminPassword) {
+                String adminPassword = requiredAdminPassword();
+                AppUser admin = existingAdmin.get();
+                admin.setPasswordHash(passwordEncoder.encode(adminPassword.trim()));
+                admin.setRole("ADMIN");
+                admin.setEnabled(true);
+                appUserRepository.save(admin);
+                log.warn("The administrator password was reset through the local recovery option.");
             }
         };
+    }
+
+    /** Reads a password only when creating or explicitly recovering the administrator account. */
+    private static String requiredAdminPassword() {
+        String adminPassword = System.getenv("ADMIN_PASSWORD");
+        if (adminPassword == null || adminPassword.isBlank()) {
+            adminPassword = System.getenv("EXAMPRO_ADMIN_PASSWORD");
+        }
+        if (adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                "Administrator setup requires ADMIN_PASSWORD (or EXAMPRO_ADMIN_PASSWORD). "
+                    + "Set it before starting ExamPro.");
+        }
+        return adminPassword;
     }
 }

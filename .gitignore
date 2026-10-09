@@ -1,4 +1,7 @@
 target/
 data/
+data-pre-refined-backup/
 .idea/
 *.class
+*.zip
+.DS_Store

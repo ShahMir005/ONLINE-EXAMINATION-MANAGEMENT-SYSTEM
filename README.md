@@ -1,86 +1,200 @@
-# ShahMir Online Examination System (ExamPro)
+# ExamPro
 
-Enterprise Spring Boot 3.3.4 Web Application with Spring Security Role-Based Access Control (RBAC) and complete Review 1 Core Java Architecture: OOP, inheritance, polymorphism, generic `Question<T>`, multithreading, JDBC CRUD with `PreparedStatement`, atomic transactions, and embedded H2 database.
+## Online Examination Management System
 
----
+ExamPro is a role-based academic examination platform for authoring assessments, registering candidates, delivering timed examinations, and reviewing results. It is an academic Java project built to demonstrate object-oriented programming, JDBC database access, transactions, concurrency, authentication, and browser-based integration.
 
-## Temporary Demo Credentials
+> **Academic project note:** The included demonstration accounts and local database are for classroom use only. Do not use the demonstration passwords in a public deployment.
 
-> [!WARNING]
-> **LOCAL-DEMO-ONLY CREDENTIALS**: The credentials below are provided strictly for local development, demonstration, and evaluation testing. Passwords are encrypted using BCrypt (`BCryptPasswordEncoder`). **You must change all passwords before any production or public deployment.**
+## Highlights
 
-| Role | Username / Email | Temporary Password | Login Portal URL | Landing Dashboard | Permissions & Scope |
-|---|---|---|---|---|---|
-| **ADMIN** | `admin@exampro.edu` | `AdminPassword123!` | [`/admin/login`](http://localhost:8080/admin/login) | [`/admin/dashboard`](http://localhost:8080/admin/dashboard) | Full access: student management, user accounts, exam authoring, results, and system administration. |
-| **TEACHER** | `teacher@exampro.edu` | `TeacherPassword123!` | [`/teacher/login`](http://localhost:8080/teacher/login) | [`/teacher/dashboard`](http://localhost:8080/teacher/dashboard) | Create, preview, and manage exams; view results; cannot delete students or manage user accounts. |
-| **STUDENT** | `ada@exampro.edu` | `StudentPassword123!` | [`/student/login`](http://localhost:8080/student/login) | [`/student/dashboard`](http://localhost:8080/student/dashboard) | Browse available exams, take timed exams under verified identity, view only their own scorecards. |
-| **STUDENT** | `alan@exampro.edu` | `StudentPassword123!` | [`/student/login`](http://localhost:8080/student/login) | [`/student/dashboard`](http://localhost:8080/student/dashboard) | Enrolled student candidate; cannot view Ada's scorecards or submit on behalf of other candidates. |
+- Role-based workspaces for administrators, teachers, and students.
+- Examination authoring for multiple-choice and true/false questions.
+- Timed candidate sittings with progress tracking, keyboard navigation, and automatic submission at expiry.
+- JDBC repositories with prepared statements, CRUD operations, and transaction management.
+- Concurrent submission processing with a worker pool and duplicate-submission protection.
+- Searchable directories, examination catalogues, results analytics, and printable scorecards.
+- Responsive, accessible interface with role-aware navigation and server-enforced permissions.
 
-Each login portal validates the account's role. Attempting to log into a portal without the matching role is rejected with a clear **Role Mismatch** error (`?error=role_mismatch`).
+## Application Screens
 
----
+The following screenshots were curated from the supplied project walkthrough. They show the main user journeys and management screens.
 
-## Quick Start (Spring Boot Web App)
+### Sign in
 
-Requires **JDK 17+** and **Maven**.
+The unified sign-in page supports student, teacher, and administrator access, with development-only quick-fill accounts for local testing.
 
-### 1. Run All Tests
+![ExamPro sign-in page](docs/screenshots/sign-in.png)
+
+### Administrator workspace
+
+Administrators can oversee examinations, candidate records, submissions, results, and user accounts from the institutional dashboard.
+
+![Administrator dashboard](docs/screenshots/admin-dashboard.png)
+
+### Teacher workspace
+
+Teachers can author examinations and review cohort performance without gaining access to administrator-only account or roster controls.
+
+![Teacher dashboard](docs/screenshots/teacher-dashboard.png)
+
+### Student workspace
+
+Students see available examinations and their own results, with a clear action to begin an assessment.
+
+![Student dashboard](docs/screenshots/student-dashboard.png)
+
+### Results registry
+
+The results registry provides assessment filtering, search, performance summaries, and links to individual scorecards.
+
+![Results registry](docs/screenshots/results-registry.png)
+
+## Role Capabilities
+
+| Capability | Student | Teacher | Administrator |
+|---|:---:|:---:|:---:|
+| Sign in and use a role-specific dashboard | Yes | Yes | Yes |
+| Browse examinations | Yes | Yes | Yes |
+| Take an examination | Yes | No | As configured for local demonstration |
+| Review personal scorecards | Yes | No | Yes |
+| View cohort results | No | Yes | Yes |
+| Create and manage examinations | No | Yes | Yes |
+| View answer keys | No | Yes | Yes |
+| Manage students and user accounts | No | No | Yes |
+
+## Technology and Design
+
+| Area | Implementation |
+|---|---|
+| Language | Java 17 |
+| Application framework | Spring Boot 3.3.4 |
+| Persistence | H2 database through JDBC repositories and `PreparedStatement` |
+| Security | Role-based access control, CSRF protection, server ownership checks, BCrypt password hashing |
+| Browser client | Vanilla JavaScript ES modules and modular CSS |
+| Build and tests | Maven, JUnit, Spring Boot Test, Spring Security Test |
+
+## Architecture
+
+```text
+Browser SPA
+  -> Web controllers and JSON APIs
+  -> Services: exam catalog, sessions, submissions, cache
+  -> JDBC repositories and transaction helper
+  -> H2 database
+```
+
+```text
+src/main/java/edu/exampro/
+├── app/          Spring Boot entry point and Review 1 console demonstration
+├── config/       Application startup and demo-data configuration
+├── db/           Connection factory, schema setup, and transactions
+├── exception/    Domain-specific exceptions
+├── model/        User, exam, question, and attempt model hierarchy
+├── repository/   JDBC CRUD repositories
+├── security/     Authentication, roles, CSRF, and password utilities
+├── service/      Examination, cache, session, and submission services
+└── web/          MVC shell and REST API controllers
+
+src/main/resources/
+├── static/css/   Design tokens, layout, components, pages, and print styles
+├── static/js/    Router, API client, shared UI helpers, and page modules
+└── templates/    Login page, application shell, and error page
+
+docs/screenshots/ Curated screenshots used in this README
+```
+
+## Quick Start
+
+### Requirements
+
+- JDK 17 or later
+- Maven 3.8 or later
+
+### 1. Run the automated tests
+
 ```bash
+cd "/Users/shahmir05/Documents/JAVA PROJECT/ExamPro"
 mvn clean test
 ```
-Runs 25 automated unit and integration tests across OOP, Collections/Generics, Transactions, Concurrency, Controllers, Spring Security RBAC, and Admin User Management.
 
-### 2. Launch Spring Boot Server
+Latest verified result: **76 tests, 0 failures, 0 errors**.
+
+### 2. Start the web application
+
 ```bash
 mvn spring-boot:run
 ```
-Starts the web application on single server **port 8080**:
-- **Application URL**: [http://localhost:8080](http://localhost:8080)
-- **Status Indicator**: `Spring Boot server :8080; H2 database connected`
-- **Database**: Embedded H2 database stored in `./data/exampro_v2` (seeded and schema-initialized automatically).
 
-### 3. Run Console Demo (Optional)
-To execute the terminal-only Review 1 verification routine:
+Open [http://localhost:8080/login](http://localhost:8080/login).
+
+### 3. Demonstration accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Administrator | `admin@exampro.local` | `Admin@123` |
+| Teacher | `teacher@exampro.local` | `Teacher@123` |
+| Student | `student@exampro.local` | `Student@123` |
+
+### 4. Run the Review 1 console demonstration
+
 ```bash
-mvn compile exec:java -Dexec.args="--console"
+mvn exec:java -Dexec.args="--console"
 ```
 
----
+The console walkthrough demonstrates inheritance and polymorphism, JDBC CRUD, collections, generic types, transaction rollback, and concurrent submissions.
 
-## Security & Architecture Highlights
+## Academic Rubric Evidence
 
-1. **Admin User Management (`/admin/users`) &mdash; ADMIN Only:**
-   - Available exclusively to administrators with `ROLE_ADMIN` (enforced by Spring Security and `adminFilterChain`).
-   - Create `ADMIN`, `TEACHER`, and `STUDENT` accounts with name, email, role, and temporary password.
-   - **BCrypt Hashing**: All passwords are encrypted with 10-round salted `BCryptPasswordEncoder`. Plaintext passwords are never stored or logged.
-   - **Duplicate Email Prevention**: Checks both `app_users` and `students` tables, rejecting duplicate email registrations with clear alert feedback.
-   - **Secure Change-Password Form**: Administrator can select any user account to reset and re-hash their password with confirmation checks.
-   - Clear privacy and safety guidance: No real Gmail or personal credentials are used; sample accounts use local-demo-only credentials.
+### Java GUI / Review 1 - 33 marks
 
-2. **Dedicated Role Portals & Authentication:**
-   - Separate login templates: `/admin/login`, `/teacher/login`, and `/student/login`.
-   - `RoleCheckingAuthenticationSuccessHandler` validates that the user possesses the required role before redirecting to the respective dashboard (`/admin/dashboard`, `/teacher/dashboard`, `/student/dashboard`). Role mismatches immediately invalidate the session and redirect with user-friendly notices.
+| Requirement | Marks | Evidence |
+|---|---:|---|
+| OOP: inheritance, polymorphism, interfaces, exceptions | 10 | `User` hierarchy, generic `Question<T>` hierarchy, repository interfaces, and custom exceptions |
+| Collections and generics | 6 | `List`, `Set`, `Map`, `CrudRepository<T>`, `Question<T>`, and `InMemoryCache<T>` |
+| Multithreading and synchronization | 4 | `ExecutorService`, `CompletableFuture`, `ConcurrentHashMap`, and `ReentrantLock` in `ExamSubmissionService` |
+| Database model and operations | 7 | Normalized tables and matching model, repository, and service classes |
+| JDBC CRUD with prepared statements | 3 | Student, examination, attempt, and account repositories use `PreparedStatement` |
+| JDBC transaction management | 3 | `Transactions.run(...)` provides atomic save and rollback behavior |
+| **Total** | **33** | **Implemented in the codebase and covered by tests** |
 
-3. **Role-Based Authorization Rules:**
-   - **ADMIN**: Access to `/admin/**` (including `/admin/users`), `/students/**`, `/exams/**`, `/results/**`.
-   - **TEACHER**: Access to `/teacher/**`, `/exams/new`, `/exams`, `/results`. Blocked from student deletion and user management (`/admin/**`).
-   - **STUDENT**: Access to `/student/**`, `/exams/*/take`, `/results`, `/attempts/{id}`. Strictly restricted to viewing only their own scorecards and taking exams under their authenticated student identity. Tampering with `studentId` parameters is prevented with `AccessDeniedException`.
-   - **Public**: Login pages (`/admin/login`, `/teacher/login`, `/student/login`), static CSS (`/css/**`), JavaScript (`/js/**`), and `/access-denied`.
+### Java Web Project - 33 marks
 
-3. **CSRF & Session Protection:**
-   - All forms protected with Spring Security CSRF tokens (`_csrf`).
-   - Secure POST logout integrated into the navigation bar across all templates.
-   - Custom access-denied handling with clear feedback on unauthorized access attempts.
+| Requirement | Marks | Evidence |
+|---|---:|---|
+| Problem understanding and solution design | 8 | Role-based workflows for assessment authoring, delivery, marking, and result review |
+| Core Java concepts | 10 | Object-oriented model, interfaces, exceptions, generics, collections, and concurrency |
+| Database integration (JDBC) | 8 | H2 schema, JDBC repositories, prepared statements, CRUD, and transactions |
+| Web integration | 7 | Spring Boot web controllers, secure REST endpoints, server sessions, and browser application |
+| **Total** | **33** | **Demonstrated by the web application and automated tests** |
 
----
+## Security Summary
 
-## Review 1 Rubric Mapping
+- Roles and ownership are enforced on the server, not only hidden in the interface.
+- A student receives only their own attempts and results.
+- Answer keys are not sent to a student before submission.
+- State-changing browser requests use CSRF protection.
+- Passwords are stored as BCrypt hashes, never as plaintext.
+- Duplicate submissions are protected with per-student, per-exam locking.
 
-| Rubric Item (Marks) | Implementation in Codebase |
-|---|---|
-| **OOP: Inheritance, Polymorphism, Interfaces, Exceptions (10)** | `model/User` &rarr; `Student`, `Instructor`; `model/Question<T>` &rarr; `MultipleChoiceQuestion`, `TrueFalseQuestion`; Interfaces `Identifiable`, `CrudRepository<T>`, `AttemptRepository`; Custom exceptions in `exception/`. |
-| **Collections & Generics (6)** | `Exam` (`List`), `ExamSubmissionService` (`Set`, `Map`, `ConcurrentHashMap`), `ExamRepository` (`Map`), `Question<T>`, `InMemoryCache<T>`, `CrudRepository<T>`, `Transactions.SqlWork<R>`. |
-| **Multithreading & Synchronization (4)** | `ExamSubmissionService`: 4-thread `ExecutorService`, `CompletableFuture`, one `ReentrantLock` per `(exam, student)`, check-and-save under lock. |
-| **Database Model & Operations (7)** | `db/DatabaseInitializer` (7 normalized tables including `app_users`, keys, constraints, cascades), model classes mirror the schema. |
-| **JDBC CRUD, PreparedStatement (3)** | `StudentRepository` (full CRUD), `ExamRepository`, `JdbcAttemptRepository`, `AppUserRepository`. |
-| **JDBC Transaction Management (3)** | `db/Transactions.run(...)` used by `ExamRepository#createWithQuestions` and `JdbcAttemptRepository#save`. |
+## Testing
+
+The Maven test suite includes coverage for:
+
+- OOP hierarchy and Review 1 requirements.
+- SPA shell and application routes.
+- Authentication, authorization, password hashing, CSRF, and answer-key protection.
+- REST endpoint access and student ownership restrictions.
+- JDBC persistence, transaction handling, and concurrent submissions.
+
+Run the suite at any time with:
+
+```bash
+mvn clean test
+```
+
+## Local Data and Backups
+
+- Local H2 data is stored in `data/` and excluded from Git and source ZIP archives because it may contain users, results, and assessment data.
+- Tables are created automatically at application startup.
+- Create a fresh source archive after changes you want to preserve.
