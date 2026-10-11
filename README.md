@@ -231,29 +231,8 @@ mvn exec:java -Dexec.args="--console"
 
 The console walkthrough demonstrates inheritance and polymorphism, JDBC CRUD, collections, generic types, transaction rollback, and concurrent submissions.
 
-## Academic Rubric Evidence
 
-### Java GUI / Review 1 - 33 marks
 
-| Requirement | Marks | Evidence |
-|---|---:|---|
-| OOP: inheritance, polymorphism, interfaces, exceptions | 10 | `User` hierarchy, generic `Question<T>` hierarchy, repository interfaces, and custom exceptions |
-| Collections and generics | 6 | `List`, `Set`, `Map`, `CrudRepository<T>`, `Question<T>`, and `InMemoryCache<T>` |
-| Multithreading and synchronization | 4 | `ExecutorService`, `CompletableFuture`, `ConcurrentHashMap`, and `ReentrantLock` in `ExamSubmissionService` |
-| Database model and operations | 7 | Normalized tables and matching model, repository, and service classes |
-| JDBC CRUD with prepared statements | 3 | Student, examination, attempt, and account repositories use `PreparedStatement` |
-| JDBC transaction management | 3 | `Transactions.run(...)` provides atomic save and rollback behavior |
-| **Total** | **33** | **Implemented in the codebase and covered by tests** |
-
-### Java Web Project - 33 marks
-
-| Requirement | Marks | Evidence |
-|---|---:|---|
-| Problem understanding and solution design | 8 | Role-based workflows for assessment authoring, delivery, marking, and result review |
-| Core Java concepts | 10 | Object-oriented model, interfaces, exceptions, generics, collections, and concurrency |
-| Database integration (JDBC) | 8 | H2 schema, JDBC repositories, prepared statements, CRUD, and transactions |
-| Web integration | 7 | Spring Boot web controllers, secure REST endpoints, server sessions, and browser application |
-| **Total** | **33** | **Demonstrated by the web application and automated tests** |
 
 ## Security Summary
 
